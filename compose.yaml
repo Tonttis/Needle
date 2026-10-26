@@ -1,0 +1,10 @@
+services:
+  needle:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      AUDIO_SOURCE: ${AUDIO_SOURCE:-preview}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
