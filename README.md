@@ -43,4 +43,8 @@ Run `python -m unittest -v` in this folder. Eleven tests cover catalog filtering
 Live catalog access returned non-JSON in the build environment, so catalog discovery, real audio, YouTube extraction and Docker build still need verification on your server. Browser visual QA was not performed. Treat this as a functional first implementation pending that integration check.
 
 ## Local development
+<<<<<<< HEAD
 `python server.py` then open http://localhost:3000. Preview mode has no Python package dependencies. YouTube mode additionally needs yt-dlp and FFmpeg on PATH.
+=======
+`python server.py` then open http://localhost:3000. Preview mode has no Python package dependencies. YouTube mode additionally needs yt-dlp and FFmpeg on PATH.
+>>>>>>> 6557c32419051f967ebf57591ea3f178b89394d4
