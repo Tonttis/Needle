@@ -44,31 +44,3 @@ Live catalog access returned non-JSON in the build environment, so catalog disco
 
 ## Local development
 `python server.py` then open http://localhost:3000. Preview mode has no Python package dependencies. YouTube mode additionally needs yt-dlp and FFmpeg on PATH.
-
-## Upgrade from version 1
-Replace server.py, static/, and other application files with this package, including the new catalog.py. Keep your existing .env and data folder. Run `docker compose up -d --build`, then hard-refresh the browser (Ctrl+F5). Existing rooms end on restart. The redesigned interface includes record artwork, refreshed mode cards, explicit region/difficulty controls and a scrollable answer list.
-
-Version 2 validation: all 11 automated tests and JavaScript syntax checks pass. Live provider and browser visual verification remain unperformed in this environment.
-
-## Version 3 fixes
-- Search is hidden when empty, debounced, query-dependent and capped at 25. No answer board is sent in state responses.
-- Correct/incorrect/skipped feedback explicitly reflects server scoring. Sixteen tests include each of four multiple-choice selections, wrong answers earning zero, and duplicate settlement protection.
-- Contributor credits are enriched via track details.
-- Home vinyl rotates; game particles drift at rest and react to Web Audio frequency energy during playback. Play vinyl animates, with reduced-motion support.
-- Home button, logo and ordinary browser Back return home. A same-page history guard prevents ordinary Back leaving the app; browser history-menu jumps cannot be controlled by the app. Late poll/audio results cannot reopen a game after leaving.
-- Versioned asset URLs refresh old cached UI files.
-
-Validation: 16 Python tests pass, Python compilation and JS syntax checks pass. Browser visual/audio QA and live provider calls remain unverified here.
-
-## Version 4 — motion and ambience
-Both vinyl discs visibly rotate with asymmetric markings. Motion defaults to Full as requested; the header cycles Full / Calm / Off and remembers your selection. This explicit in-app choice overrides the OS reduced-motion setting. Particles and drifting color clouds appear on the home page and inside the game panel. During playback, the real Web Audio analyzer drives two side spectra, the center equalizer, and wave effects.
-
-Ambience starts only through the Ambience button. The soundtrack is an original synthesized suspended chord with gentle modulation; it has its own volume slider and fades out during games and when the tab is hidden. Return home to resume it if enabled. No audio downloads or external music service is needed for menu ambience.
-
-After answer reveal, the available preview automatically plays from the beginning once audio has been unlocked by a user interaction. Browser autoplay restrictions can still require pressing Play if a round times out without any interaction. Next/Home stops it. Preview length follows the available audio (provider preview or extracted YouTube segment).
-
-Version 4 validation: 16 backend tests pass; JavaScript syntax checks pass. Browser QA with an isolated synthesized test clip confirmed rotating record transforms, live analyzer energy and 56 side bars, and automatic playback after an incorrect guess. Menu ambience toggle was exercised in-browser. Live external music-provider playback remains unverified here. QA fixtures are excluded from this package.
-
-Upgrade: preserve your .env and data, replace the application files including static/effects.js, then run docker compose up -d --build. The header should show V4 and Motion: Full. Assets use versioned URLs and the server sends no-store to prevent stale interface caching.
-"# Needle" 
-"# Needle" 
