@@ -1,5 +1,6 @@
+import sqlite3
 import json, os, secrets, time, random, threading, urllib.request, urllib.parse, subprocess, pathlib, mimetypes
-from catalog import build_pool, round_choices, norm, REGIONS, DIFFICULTIES, GENRES as CATALOG_GENRES
+from catalog import choose_song, artist_key, build_pool, round_choices, norm, REGIONS, DIFFICULTIES, GENRES as CATALOG_GENRES
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -8,14 +9,34 @@ DATA=ROOT/'data'; DATA.mkdir(exist_ok=True)
 STEPS=[.1,.5,2,8,15]
 GENRES={'Mixed':0,'Pop':132,'Rock':152,'Metal':464,'Rap / Hip Hop':116,'Dance':113,'Electronic':106,'R&B':165,'Jazz':129,'Classical':98}
 rooms={}; lock=threading.RLock(); cache={}
+request_lock=threading.Lock()
+last_request=0.0
+
 def fetch(path):
-    if path in cache and time.time()-cache[path][0]<3600: return cache[path][1]
+    global last_request
+    now=time.time()
+    if path in cache and now-cache[path][0]<86400:return cache[path][1]
+    # Metadata only. Persistent cache survives container rebuilds via /app/data.
+    with sqlite3.connect(DATA/'catalog-cache.sqlite',timeout=20) as db:
+        db.execute('CREATE TABLE IF NOT EXISTS responses (path TEXT PRIMARY KEY, saved REAL, body TEXT)')
+        row=db.execute('SELECT saved,body FROM responses WHERE path=?',(path,)).fetchone()
+    if row and now-row[0]<86400:
+        value=json.loads(row[1]);cache[path]=(row[0],value);return value
     try:
-        with urllib.request.urlopen('https://api.deezer.com/'+path,timeout=15) as r: v=json.load(r)
-    except Exception as e:
-        raise ValueError('Music catalog could not be reached. Check server internet access and try again.') from e
-    if 'error' in v: raise ValueError('Music provider unavailable. Try again shortly.')
-    cache[path]=(time.time(),v); return v
+        with request_lock:
+            delay=.09-(time.monotonic()-last_request)
+            if delay>0:time.sleep(delay)
+            last_request=time.monotonic()
+        request=urllib.request.Request('https://api.deezer.com/'+path,headers={'Accept':'application/json','Accept-Language':'en','User-Agent':'Needle/5'})
+        with urllib.request.urlopen(request,timeout=12) as response:value=json.load(response)
+        if not isinstance(value,dict) or 'error' in value:raise ValueError('Music provider unavailable')
+    except Exception as error:
+        if row and now-row[0]<7*86400:return json.loads(row[1])
+        raise ValueError('Music catalog could not be reached. Check server internet access and try again.') from error
+    cache[path]=(now,value)
+    with sqlite3.connect(DATA/'catalog-cache.sqlite',timeout=20) as db:
+        db.execute('INSERT OR REPLACE INTO responses VALUES (?,?,?)',(path,now,json.dumps(value)))
+    return value
 def clean(t):
     names=list(dict.fromkeys(a['name'] for a in [t['artist']]+t.get('contributors',[]) if a.get('name')))
     return {'id':str(t['id']),'title':t['title'],'artist':', '.join(names),'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link','')}
@@ -43,14 +64,13 @@ def pool(genre,region='Worldwide',difficulty='Normal'):
         raise ValueError('Invalid music filters')
     return build_pool(fetch,clean,genre,region,difficulty)
 def advance(r):
-    candidates=[t for t in r['pool'] if t['id'] not in r['used']]
-    if not candidates: r['used']=[]; candidates=r['pool'][:]
-    r['song']=random.choice(candidates); r['used'].append(r['song']['id'])
+    r['song']=choose_song(r); r['used'].append(r['song']['id'])
     r['stage']=0; r['guesses']={}; r['history']=[]; r['round']+=1; r['phase']='playing'; r['deadline']=time.time()+45
     r['board'],r['options']=round_choices(r['song'],r['pool'])
     if r.get('hydrate',False):
         with ThreadPoolExecutor(max_workers=4) as workers: list(workers.map(credit,r['options']))
     r['audioKey']=secrets.token_urlsafe(24)
+    r['deadline']=time.time()+45
 def settle(r):
     if r['phase']!='playing': return
     if len(r['guesses'])<len(r['players']) and time.time()<r['deadline']: return
@@ -66,6 +86,7 @@ def state(r,p):
     settle(r)
     out={k:r[k] for k in ['code','mode','multi','phase','round','rounds','stage','deadline','genre','history']}
     out['players']=[dict(name=v['name'],score=v['score'],me=k==p,host=k==r['host'],submitted=k in r['guesses']) for k,v in r['players'].items()]
+    out['catalog']={'tracks':len(r['pool']),'artists':len({artist_key(t) for t in r['pool']}),'countries':len({t.get('country','?') for t in r['pool']})}
     out['region']=r.get('region','Worldwide'); out['difficulty']=r.get('difficulty','Normal')
     if r['phase'] in ['reveal','finished']:
         out['correct']=p in r.get('winners',[])
@@ -73,7 +94,7 @@ def state(r,p):
     out['host']=p==r['host']; out['submitted']=p in r['guesses']; out['serverTime']=time.time()
     if r['phase']!='lobby': out['audio']='/audio/'+r['audioKey']; out['seconds']=5 if r['mode']=='choice' else STEPS[r['stage']]
     if r['mode']=='choice' and r['phase']=='playing': out['options']=[{k:t[k] for k in ['id','title','artist']} for t in r['options']]
-    if r['phase'] in ['reveal','finished']: out['answer']={k:v for k,v in r['song'].items() if k not in ['preview','_credits']}
+    if r['phase']=='reveal': out['answer']={k:v for k,v in r['song'].items() if k not in ['preview','_credits']}
     return out
 class Handler(BaseHTTPRequestHandler):
     def reply(self,v,status=200):
@@ -144,6 +165,10 @@ class Handler(BaseHTTPRequestHandler):
                     allowed=r['options'] if r['mode']=='choice' else [t for t in r['pool'] if t.get('genre')==r['song'].get('genre') and t.get('language')==r['song'].get('language')]
                     if guess and guess not in {t['id'] for t in allowed}: raise ValueError('Choose an answer from this round')
                     r['guesses'][p]=guess; settle(r)
+                elif action=='lobby':
+                    if p!=r['host'] or r['phase']!='finished':raise ValueError('Only the host can return a finished match to the lobby')
+                    for player in r['players'].values():player['score']=0
+                    r.update(phase='lobby',round=0,stage=0,guesses={},history=[],winners=[],artist_counts={},country_counts={},recent_artists=[])
                 elif action=='next':
                     if p!=r['host'] or r['phase'] not in ['lobby','reveal']: raise ValueError('Only host can continue')
                     if r['round']>=r['rounds']: r['phase']='finished'
