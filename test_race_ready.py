@@ -37,3 +37,17 @@ class RaceHTTPTests(fixtures.HTTPGameTests):
    host=self.post('create',dict(mode='race',multi=False));s.rooms[host['room']]['race_status']='error'
    view=self.post('race-skip',dict(**host,round=1));self.assertEqual(view['phase'],'reveal')
    del s.rooms[host['room']]
+ def test_wrong_guesses_retry_after_cooldown_and_skip(self):
+  import urllib.error
+  with patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'credit',side_effect=lambda t:t):
+   host=self.post('create',dict(mode='race',multi=False));room=s.rooms[host['room']]
+   start=time.time()-20;room.update(race_started=start,race_status='playing',deadline=start+300)
+   correct=room['song'];wrong=next(t for t in room['pool'] if t['id']!=correct['id'] and t['genre']==correct['genre'] and t['language']==correct['language'])
+   with patch.object(s.time,'time',return_value=start+21):
+    view=self.post('guess',dict(**host,round=1,id=wrong['id']))
+    self.assertEqual(view['phase'],'playing');self.assertFalse(view['submitted']);self.assertEqual(view['race_cooldown_until'],start+26)
+    with self.assertRaises(urllib.error.HTTPError):self.post('guess',dict(**host,round=1,id=correct['id']))
+   with patch.object(s.time,'time',return_value=start+26):
+    view=self.post('guess',dict(**host,round=1,id=correct['id']))
+   self.assertEqual(view['phase'],'reveal');self.assertTrue(view['correct'])
+   del s.rooms[host['room']]

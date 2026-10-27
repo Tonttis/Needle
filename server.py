@@ -126,7 +126,7 @@ RACE_BUFFER_TIMEOUT=150
 def advance(r):
     r['song']=choose_song(r); r['used'].append(r['song']['id'])
     r['stage']=0; r['guesses']={}; r['history']=[]; r['round']+=1; r['phase']='playing'; r['deadline']=time.time()+45
-    r['guess_times']={}; r['race_started']=None
+    r['guess_times']={}; r['race_cooldowns']={}; r['race_wrong']={}; r['race_started']=None
     if r.get('mode')=='race':
         # Gated path: video (720p mp4 via yt-dlp, audio muxed in) or at the
         # very least full-length audio must be ready BEFORE the guess clock
@@ -213,7 +213,7 @@ def state(r,p):
     out['host']=p==r['host']; out['submitted']=p in r['guesses']; out['serverTime']=time.time()
     if r['phase']!='lobby': out['audio']='/audio/'+r['audioKey']; out['seconds']=r.get('race_duration',0) if r.get('mode')=='race' else (5 if r['mode']=='choice' else STEPS[r['stage']])
     if r.get('mode')=='race':
-        out.update(race_status=r.get('race_status'),race_error=r.get('race_error'),race_duration=r.get('race_duration',0),race_started=r.get('race_started'),elapsed=max(0,time.time()-(r.get('race_started') or time.time())))
+        out.update(race_cooldown_until=r.get('race_cooldowns',{}).get(p,0),race_wrong=r.get('race_wrong',{}).get(p,False),race_status=r.get('race_status'),race_error=r.get('race_error'),race_duration=r.get('race_duration',0),race_started=r.get('race_started'),elapsed=max(0,time.time()-(r.get('race_started') or time.time())))
         if r.get('race_path'):out['race_url']='/race-media/'+r['audioKey'];out['race_type']=r['race_type']
     if r['mode']=='choice' and r['phase']=='playing': out['options']=[{k:t[k] for k in ['id','title','artist']} for t in r['options']]
     if r['phase']=='reveal':
@@ -478,6 +478,8 @@ class Handler(BaseHTTPRequestHandler):
                     elif action=='race-skip':
                         r['guesses'][p]=''
                         if len(r['guesses'])==len(r['players']):r['phase']='reveal';r['winners']=[]
+                        elif not r.get('race_started') and r.get('race_status')=='ready' and r['race_ready']>=set(r['players'])-set(r['guesses']):
+                            r['race_started']=time.time()+2;r['deadline']=r['race_started']+r['race_duration'];r['race_status']='playing'
                     return self.reply(state(r,p))
                 if action=='guess':
                     if r.get('mode')=='race' and (not r.get('race_started') or time.time()<r['race_started']):raise ValueError('Waiting for media playback')
@@ -486,9 +488,14 @@ class Handler(BaseHTTPRequestHandler):
                         if d.get('round')!=r['round']: raise ValueError('Stage changed; try again')
                     elif d.get('round')!=r['round'] or d.get('stage')!=r['stage']: raise ValueError('Stage changed; try again')
                     guess=str(d.get('id',''))
+                    if r.get('mode')=='race' and time.time()<r.get('race_cooldowns',{}).get(p,0):raise ValueError('Please wait for your guess cooldown')
                     allowed=r['options'] if r['mode']=='choice' else [t for t in r['pool'] if t.get('genre')==r['song'].get('genre') and t.get('language')==r['song'].get('language')]
                     if guess and guess not in {t['id'] for t in allowed}: raise ValueError('Choose an answer from this round')
-                    r['guesses'][p]=guess; r.setdefault('guess_times',{})[p]=time.time()-(r.get('race_started') or time.time()); settle(r)
+                    if r.get('mode')=='race' and guess and guess!=r['song']['id']:
+                        r.setdefault('race_cooldowns',{})[p]=time.time()+5
+                        r.setdefault('race_wrong',{})[p]=True
+                    else:
+                        r['guesses'][p]=guess; r.setdefault('guess_times',{})[p]=time.time()-(r.get('race_started') or time.time()); settle(r)
                 elif action=='lobby':
                     if p!=r['host'] or r['phase']!='finished':raise ValueError('Only the host can return a finished match to the lobby')
                     for player in r['players'].values():player['score']=0

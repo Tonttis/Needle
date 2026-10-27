@@ -80,3 +80,6 @@ Corrects conflicting subprocess capture arguments that prevented every YouTube s
 Race playback attempts to start automatically once downloaded; browser autoplay restrictions may require a click. The shared server starts the race after the players have unlocked playback. Cache files expire 30 days after download and least-recently-used files are removed above 2 GiB; in-use files are protected until a round ends. Cleanup runs at startup, hourly and on cache use. Temporary downloads may use extra space while in progress.
 
 The previous Spotify-preview message was incorrect: the optional reveal preview is an Apple iTunes Search preview; the Spotify link is a search link. The reveal now waits for that lookup and labels the fallback correctly. No Spotify API is configured.
+
+## V8.4 video race guesses
+Video Race allows repeated guesses. Incorrect guesses trigger a five-second per-player cooldown enforced by the server; correct guesses finish the race as before. The separate Skip song control remains available, including during cooldown. The snippet skip control is hidden in Video Race.
