@@ -11,7 +11,7 @@ const scope={mode:'guess',$:id=>elements[id],esc:s=>s.replace(/&/g,'&amp;'),api:
 vm.createContext(scope);const code=fs.readFileSync('static/app.js','utf8');vm.runInContext(code.slice(code.indexOf('let warmTimer,mixConfig;')),scope);
 setImmediate(()=>{try{
  assert.equal(elements['#solo'].disabled,false);assert.equal(elements['#difficulty'].value,'Easy');
- assert.equal(elements['#region'].options.length,36);
+ assert.equal(elements['#region'].options.length,config.regions.length);
  for(const region of config.regions){
   elements['#region'].value=region;elements['#genre'].value='Mixed';elements['#difficulty'].value='Easy';vm.runInContext('syncMix()',scope);
   assert.equal(elements['#difficulty'].value,'Easy',region);

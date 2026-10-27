@@ -23,14 +23,14 @@ function renderRevealExtras(answer){
   box.innerHTML=
    (answer.race_points!=null?'<span class="muted">Race: +'+answer.race_points+' pts in '+(answer.race_elapsed||0)+'s</span>':'')+
    (ytUrl?'<a class="yt-open" target="_blank" rel="noopener" href="'+esc(ytUrl)+'">Watch on YouTube</a>':'')+
-   (hasPreview?'<audio id="spotify-audio" preload="auto"></audio>':'<span class="muted">Spotify preview unavailable &mdash; playing Deezer instead.</span>');
+   (hasPreview?'<audio id="spotify-audio" preload="auto"></audio>':answer.preview_pending?'<span class="muted">Finding an Apple Music preview…</span>':'<span class="muted">Apple Music preview unavailable; trying the game preview.</span>');
   const audio=$('#spotify-audio');
   if(audio){
    try{audio.volume=+($('#volume').value||.7)}catch{}
    audio.src='/spotify-audio/'+(state.audio||'').split('/').pop();
    audio.play().catch(()=>{});
    audio.onerror=()=>{try{$('#play').click()}catch(e){error(e)}};
-  }else{
+  }else if(!answer.preview_pending){
    try{if(ctx){const revealAudio=state.audio;queueMicrotask(()=>{if(state&&state.phase==='reveal'&&state.audio===revealAudio)$('#play').click()})}}catch{}
   }
  }catch{}
@@ -59,7 +59,7 @@ $('#play').onclick=async()=>{
  source.start(0,0,Math.min(current.phase==='reveal'?buffer.duration:current.seconds,buffer.duration));document.body.classList.add('is-playing');window.dispatchEvent(new CustomEvent('needle:audio',{detail:{playing:true,analyser,duration:current.phase==='reveal'?buffer.duration:current.seconds}}));$('#play').textContent='■';
  }catch(e){audioDownloads.delete(current.audio);if(generation===playGeneration){stop();error(e)}}
 };
-async function refresh(){if(!session||polling)return;polling=true;try{const active=session,epoch=mutationEpoch;const v=await api('state?room='+active.room+'&token='+active.token);if(session!==active||epoch!==mutationEpoch)return;const wasReveal=state&&state.phase==='reveal'&&state.round===v.round&&state.stage===v.stage;state=v;render();if(state.phase==='reveal'&&state.answer&&!wasReveal)renderRevealExtras(state.answer)}catch(e){error(e)}finally{polling=false}}
+async function refresh(){if(!session||polling)return;polling=true;try{const active=session,epoch=mutationEpoch;const v=await api('state?room='+active.room+'&token='+active.token);if(session!==active||epoch!==mutationEpoch)return;const wasReveal=state&&state.phase==='reveal'&&state.round===v.round&&state.stage===v.stage;const previousPreview=state?.answer?.spotify_preview,previousPending=state?.answer?.preview_pending;state=v;render();if(state.phase==='reveal'&&state.answer&&(!wasReveal||previousPreview!==state.answer.spotify_preview||previousPending!==state.answer.preview_pending))renderRevealExtras(state.answer)}catch(e){error(e)}finally{polling=false}}
 function render(){$('#game').classList.toggle('finished',state.phase==='finished');$('#wrapup').hidden=state.phase!=='finished';if(state.phase==='finished')renderFinal();
 renderRaceVideo();if(state.phase!=='reveal')$('#reveal-extras')?.remove();$('#catalog-info').textContent=state.catalog?(state.catalog.answers??state.catalog.tracks)+' eligible songs · '+state.catalog.artists+' artists · '+state.catalog.tracks+' searchable tracks':'';$('#home').hidden=true;$('#game').hidden=false;window.dispatchEvent(new CustomEvent('needle:screen',{detail:{home:false}}));const key=state.round+':'+state.stage+':'+state.phase;if(key!==last){stop();$('#search').value='';$('#results').innerHTML='';last=key; if(state.audio&&state.phase==='playing'&&state.mode!=='race')downloadAudio(state.audio).catch(()=>{}); searchSeq++; $('.answer-hint').textContent='Type at least 2 characters · up to 25 matching suggestions'; $('#skip').disabled=false; /* reveal autoplay handled by renderRevealExtras: Spotify default, Deezer fallback */}$('#roundLabel').textContent=state.multi?'ROOM '+state.code+' / '+state.round+' OF '+state.rounds:'TRACK '+state.round+' / '+state.rounds;$('#scores').innerHTML=state.players.map(p=>'<span class="score">'+esc(p.name)+(p.me?' · you':'')+(p.submitted?' ✓':'')+'<b>'+p.score+'</b></span>').join('');$('#status').textContent=state.region.toUpperCase()+' · '+state.genre.toUpperCase()+' · '+state.difficulty.toUpperCase()+' / '+raceLabel();$('#headline').textContent=state.phase==='lobby'?'Your listening room.':state.phase==='finished'?'That’s a wrap.':state.phase==='reveal'?(state.correct?'You got it!':state.result==='skipped'?'No guess this time.':'Not this one.'):state.submitted?'Guess locked in.':'Sounds familiar?';$('.disc').hidden=['lobby','finished'].includes(state.phase)||state.mode==='race';$('#steps').innerHTML=state.phase==='lobby'?'Share your room code. Friends can join before you start.':(state.mode==='race'?[]:stepsFor(state.mode)).map((n,i)=>'<span class="step '+(i===state.stage?'active':'')+'">'+n+'s</span>').join('');$('#guessbox').hidden=state.phase!=='playing'||state.mode==='choice'||state.submitted||(state.mode==='race'&&(!state.race_started||state.serverTime<state.race_started));$('#choices').hidden=state.phase!=='playing'||state.mode!=='choice'||state.submitted;const optionKey=JSON.stringify(state.options||[])+':'+state.round;if($('#choices').dataset.key!==optionKey){$('#choices').dataset.key=optionKey;$('#choices').innerHTML=(state.options||[]).map(o=>'<button data-id="'+esc(o.id)+'">'+esc(o.title)+'<br><small>'+esc(o.artist)+'</small></button>').join('');$('#choices').querySelectorAll('button').forEach(b=>b.onclick=()=>guess(b.dataset.id));}$('#answer').innerHTML=state.answer?'<p class="result-label '+(state.correct?'result-correct':'result-wrong')+'">'+(state.correct?'✓ Correct answer':'✕ '+(state.result==='skipped'?'Skipped or timed out':'Incorrect answer'))+'</p><img alt="Album artwork" src="'+esc(state.answer.art)+'"><h2>'+esc(state.answer.title)+'</h2><p>'+esc(state.answer.artist)+'</p><div class="listen-row">'+(state.answer.link?'<a class="deezer-open" target="_blank" rel="noopener" href="'+esc(state.answer.link)+'">Listen on Deezer</a>':'')+(state.answer.spotify_url?'<a class="spotify-open" target="_blank" rel="noopener" href="'+esc(state.answer.spotify_url)+'">Open in Spotify</a>':'')+'</div>':'';$('#next').hidden=!state.host||!['lobby','reveal'].includes(state.phase);$('#next').textContent=state.phase==='lobby'?'Everyone here? Start →':state.round>=state.rounds?'See final scores →':'Next song →';$('#clock').textContent=state.mode==='race'&&!state.race_started?'Preparing media — clock paused':state.phase==='playing'?(state.submitted?'Waiting for the other listeners · ':'')+Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds to guess':state.phase==='finished'?state.players.slice().sort((a,b)=>b.score-a.score).map(p=>p.name+' · '+p.score).join(' / '):''}
 let searchTimer;
@@ -86,26 +86,26 @@ function renderRaceVideo(){
  }
  if(!box){box=document.createElement('div');box.id='race-video';$('.player').appendChild(box)}
  const key=state.audio;
- if(raceKey!==key){box.querySelector('video')?.pause();if(raceObjectURL)URL.revokeObjectURL(raceObjectURL);raceObjectURL='';raceKey=key;raceLoading=false;box.innerHTML='<p class="race-message">Preparing full-length video or audio… No guessing time is running.</p><button class="race-start">Start playback</button><button class="race-skip">Skip song</button><video playsinline preload="auto" style="width:100%;max-height:420px"></video>';
+ if(raceKey!==key){box.querySelector('video')?.pause();if(raceObjectURL)URL.revokeObjectURL(raceObjectURL);raceObjectURL='';raceKey=key;raceLoading=false;box.innerHTML='<p class="race-message">Preparing full-length video or audio… No guessing time is running.</p><button class="race-start" hidden>Start playback</button><button class="race-skip">Skip song</button><video playsinline preload="auto" style="width:100%;max-height:420px"></video>';
  box.querySelector('.race-skip').onclick=()=>action('race-skip',{round:state.round});
  box.querySelector('.race-start').onclick=async()=>{if(state.race_status==='error'){await action('race-retry',{round:state.round});return}const v=box.querySelector('video');try{await v.play()}catch{box.querySelector('.race-message').textContent='Press Start playback once media has loaded.'}};
  }
  const v=box.querySelector('video');v.volume=Number($('#volume').value);
  const message=box.querySelector('.race-message');
- if(state.race_status==='error'){message.textContent=state.race_error;box.querySelector('.race-start').textContent='Retry media';return}
+ if(state.race_status==='error'){message.textContent=state.race_error;box.querySelector('.race-start').hidden=false;box.querySelector('.race-start').textContent='Retry media';return}
  if(state.race_url&&!raceLoading&&!raceObjectURL){
   raceLoading=true;const round=state.round;
   fetch(state.race_url).then(r=>{if(!r.ok)throw Error('Media download failed');return r.blob()}).then(blob=>{
    if(raceKey!==key)return;
    raceObjectURL=URL.createObjectURL(blob);v.src=raceObjectURL;
-   v.onplaying=async()=>{if(raceKey!==key)return;if(!state.race_started){v.dataset.unlocked='1';v.pause();v.currentTime=0;message.textContent='Ready. Waiting for the other listeners…';await action('race-ready',{round})}};
+   v.onplaying=async()=>{if(raceKey!==key)return;if(!state.race_started){box.querySelector('.race-start').hidden=true;v.dataset.unlocked='1';v.pause();v.currentTime=0;message.textContent='Ready. Waiting for the other listeners…';await action('race-ready',{round})}};
    v.onerror=()=>{if(raceKey!==key)return;if(state.race_type==='video/mp4'&&!state.race_started){message.textContent='Trying full-length audio instead…';action('race-audio',{round})}else message.textContent='Browser could not decode this media. Skip this song or retry the download.'};
-   v.oncanplay=()=>{if(v.dataset.unlocked)return;v.play().catch(()=>{message.textContent='Media ready. Press Start playback to enable sound.'})};
+   v.oncanplay=()=>{if(v.dataset.unlocked)return;v.play().catch(()=>{box.querySelector('.race-start').hidden=false;message.textContent='Media ready. Press Start playback to enable sound.'})};
   }).catch(e=>{if(raceKey===key){raceLoading=false;message.textContent=e.message+' — retrying.'}});
  }
  if(state.race_started&&raceObjectURL){const delay=state.race_started-state.serverTime;
   if(delay>0)message.textContent='Everyone ready. Starting…';
-  else {message.textContent=Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds remaining';if(v.paused){v.currentTime=Math.min(state.elapsed||0,v.duration||0);v.play().catch(()=>{message.textContent='Press Start playback to resume sound.'})}}
+  else {message.textContent=Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds remaining';if(v.paused){v.currentTime=Math.min(state.elapsed||0,v.duration||0);v.play().catch(()=>{box.querySelector('.race-start').hidden=false;message.textContent='Press Start playback to resume sound.'})}}
  }
 }
 $('#code').value=new URLSearchParams(location.search).get('room')||'';setInterval(refresh,1000);refresh();

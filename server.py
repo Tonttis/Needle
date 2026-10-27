@@ -1,4 +1,4 @@
-from race_media import prepare as prepare_race_media
+from race_media import prepare as prepare_race_media, start_janitor
 from audio_cache import AudioCache
 from recognition import VERSION as CATALOG_VERSION, in_difficulty
 from catalog import filter_options
@@ -142,7 +142,7 @@ def advance(r):
     r['audioKey']=secrets.token_urlsafe(24)
     r['deadline']=r['deadline'] if r.get('mode')=='race' else time.time()+45
     if r.get('mode')=='race':queue_youtube(r)
-    r['reveal_metadata']={};r['reveal_pending']=False
+    r['reveal_metadata']={};r['reveal_pending']=False;r['reveal_done']=False
 def settle(r):
     if r['phase']!='playing': return
     if r.get('mode')=='race':return settle_race(r)
@@ -227,6 +227,7 @@ def state(r,p):
         # doubles as the Spotify-link resolver input. Deezer stays the game
         # audio; this is reveal-only enrichment and never blocks reveal.
         ans.update(r.get('reveal_metadata',{}))
+        ans['preview_pending']=bool(r.get('reveal_pending') and not r.get('reveal_done'))
         if not r.get('reveal_pending') and not r.get('reveal_metadata') and str(r['song'].get('preview','')).startswith('http'):
             r['reveal_pending']=True
             key=r['audioKey'];artist=ans['artist'];title=ans['title']
@@ -234,8 +235,9 @@ def state(r,p):
                 try:metadata=spotify_enrich(artist,title)
                 except Exception:metadata={}
                 with lock:
-                    if r.get('audioKey')==key:r['reveal_metadata']=metadata
+                    if r.get('audioKey')==key:r.update(reveal_metadata=metadata,reveal_done=True)
             credit_workers.submit(enrich)
+        ans['preview_pending']=bool(r.get('reveal_pending') and not r.get('reveal_done'))
         out['answer']=ans
     return out
 
@@ -273,7 +275,7 @@ def spotify_enrich(artist,title):
             if not name:continue
             if name==want or want in name or name in want:
                 best=row;break
-        best=best or data['results'][0]
+        if not best:return out
         if best.get('previewUrl'):out['spotify_preview']=best['previewUrl']
         if best.get('artworkUrl100'):out['spotify_art']=best['artworkUrl100'].replace('100x100','300x300')
         if best.get('trackViewUrl'):out['apple_url']=best['trackViewUrl']
@@ -369,13 +371,18 @@ def queue_youtube(r):
         try:
             vid,title=resolve_youtube(song['artist'],song['title'])
             if not vid:raise ValueError('No playable video found. Retry or skip this song.')
-            path,duration,typ=prepare_race_media(DATA,vid,audio_only=audio_only)
+            def active_media():
+                with lock:return [x.get('race_path') for x in rooms.values() if x.get('phase')=='playing']
+            path,duration,typ=prepare_race_media(DATA,vid,audio_only=audio_only,protected=active_media)
             result=dict(race_path=path,race_duration=duration,race_type=typ,race_status='ready',videoId=vid,videoTitle=title)
         except Exception as e:result=dict(race_status='error',race_error=str(e))
         with lock:
             cur=rooms.get(code)
             if cur and cur.get('audioKey')==key:cur.update(result)
     video_workers.submit(run)
+def active_race_media():
+    with lock:return [r.get('race_path') for r in rooms.values() if r.get('phase')=='playing']
+start_janitor(DATA,active_race_media)
 FILTER_OPTIONS=filter_options()
 class Handler(BaseHTTPRequestHandler):
     protocol_version="HTTP/1.1"
