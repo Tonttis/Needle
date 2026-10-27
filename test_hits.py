@@ -26,7 +26,7 @@ class HitsSelectionTests(unittest.TestCase):
 
  def test_race_points_and_first_wins(self):
   from server import race_points, settle_race
-  self.assertEqual([race_points(x) for x in [1,5,10,20,28,31]],[5,4,3,2,1,0])
+  self.assertEqual([race_points(x) for x in [1,5,10,20,28,31]],[5,4,3,2,1,1])
   room=dict(pool=[],used=[],difficulty='Medium',rounds=3,region='Worldwide',mode='race',multi=False,
             players={'a':{'name':'A','score':0}},song={'id':'s1','artist_id':'x'},race_started=1000.0,deadline=1030.0,guesses={'a':'s1'},guess_times={'a':2.0})
   import server as s

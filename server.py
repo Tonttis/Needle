@@ -1,3 +1,4 @@
+from race_media import prepare as prepare_race_media
 from audio_cache import AudioCache
 from recognition import VERSION as CATALOG_VERSION, in_difficulty
 from catalog import filter_options
@@ -116,17 +117,24 @@ def pool(genre,region='Worldwide',difficulty='Normal'):
 def race_points(elapsed):
     try:elapsed=float(elapsed)
     except (TypeError,ValueError):return 0
-    return 5 if elapsed<=3 else 4 if elapsed<=8 else 3 if elapsed<=15 else 2 if elapsed<=25 else 1 if elapsed<30 else 0
+    return 5 if elapsed<=3 else 4 if elapsed<=8 else 3 if elapsed<=15 else 2 if elapsed<=25 else 1
+
+RACE_FORMAT='bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best'
+RACE_MAX_BYTES=80*1024*1024
+RACE_BUFFER_TIMEOUT=150
 
 def advance(r):
     r['song']=choose_song(r); r['used'].append(r['song']['id'])
     r['stage']=0; r['guesses']={}; r['history']=[]; r['round']+=1; r['phase']='playing'; r['deadline']=time.time()+45
-    r['guess_times']={}; r['race_started']=time.time()
+    r['guess_times']={}; r['race_started']=None
     if r.get('mode')=='race':
-        # Fast path: race plays the Deezer snippet-loop too, so a missing
-        # YouTube result never blocks the round. Video resolves in background.
-        r['videoId']=None; r['videoTitle']=None
-        r['deadline']=time.time()+30
+        # Gated path: video (720p mp4 via yt-dlp, audio muxed in) or at the
+        # very least full-length audio must be ready BEFORE the guess clock
+        # starts. Deadline = full track length once ready; guessing blocked
+        # until then. Buffering timeout keeps a stuck download from hanging.
+        r['videoId']=None; r['videoTitle']=None; r['race_video']=None; r.pop('race_path',None)
+        r['race_status']='buffering'; r['race_error']=None; r['race_duration']=0
+        r['race_started']=None; r['deadline']=0; r['race_ready']=set();r['race_audio_only']=False
     r['board'],r['options']=round_choices(r['song'],r['pool'])
     r['history'].append({'answer':r['song']['id'],'artist':artist_key(r['song'])})
     if r.get('hydrate',False):
@@ -134,6 +142,7 @@ def advance(r):
     r['audioKey']=secrets.token_urlsafe(24)
     r['deadline']=r['deadline'] if r.get('mode')=='race' else time.time()+45
     if r.get('mode')=='race':queue_youtube(r)
+    r['reveal_metadata']={};r['reveal_pending']=False
 def settle(r):
     if r['phase']!='playing': return
     if r.get('mode')=='race':return settle_race(r)
@@ -154,8 +163,9 @@ def settle_race(r):
     Multi ends on first correct, all-answered, or timeout. Only the fastest
     correct player scores; slower correct players get 0.
     """
+    if not r.get('race_started'):return
     now=time.time()
-    started=r.get('race_started',now)
+    started=r['race_started']
     def elapsed(p):return r.get('guess_times',{}).get(p,now-started)
     correct=[p for p,g in r['guesses'].items() if g==r['song']['id']]
     total=len(r.get('players',{}))
@@ -201,12 +211,10 @@ def state(r,p):
         out['correct']=p in r.get('winners',[])
         out['result']='correct' if out['correct'] else 'incorrect' if r['guesses'].get(p) else 'skipped'
     out['host']=p==r['host']; out['submitted']=p in r['guesses']; out['serverTime']=time.time()
-    if r['phase']!='lobby': out['audio']='/audio/'+r['audioKey']; out['seconds']=30 if r.get('mode')=='race' else (5 if r['mode']=='choice' else STEPS[r['stage']])
-    if r.get('mode')=='race' and r['phase']=='playing':
-        # Video resolves in background; client hides the player until ready.
-        if r.get('videoId'):out['videoId']=r['videoId'];out['videoTitle']=r.get('videoTitle','')
-        out['race_started']=r.get('race_started',time.time())
-        out['elapsed']=round(time.time()-r.get('race_started',time.time()),2)
+    if r['phase']!='lobby': out['audio']='/audio/'+r['audioKey']; out['seconds']=r.get('race_duration',0) if r.get('mode')=='race' else (5 if r['mode']=='choice' else STEPS[r['stage']])
+    if r.get('mode')=='race':
+        out.update(race_status=r.get('race_status'),race_error=r.get('race_error'),race_duration=r.get('race_duration',0),race_started=r.get('race_started'),elapsed=max(0,time.time()-(r.get('race_started') or time.time())))
+        if r.get('race_path'):out['race_url']='/race-media/'+r['audioKey'];out['race_type']=r['race_type']
     if r['mode']=='choice' and r['phase']=='playing': out['options']=[{k:t[k] for k in ['id','title','artist']} for t in r['options']]
     if r['phase']=='reveal':
         ans={k:v for k,v in r['song'].items() if k not in ['preview','_credits']}
@@ -218,8 +226,16 @@ def state(r,p):
         # 30s best-part preview + artwork + trackViewUrl for most tracks, and
         # doubles as the Spotify-link resolver input. Deezer stays the game
         # audio; this is reveal-only enrichment and never blocks reveal.
-        try:ans.update(spotify_enrich(ans.get('artist',''),ans.get('title','')))
-        except Exception:pass
+        ans.update(r.get('reveal_metadata',{}))
+        if not r.get('reveal_pending') and not r.get('reveal_metadata') and str(r['song'].get('preview','')).startswith('http'):
+            r['reveal_pending']=True
+            key=r['audioKey'];artist=ans['artist'];title=ans['title']
+            def enrich():
+                try:metadata=spotify_enrich(artist,title)
+                except Exception:metadata={}
+                with lock:
+                    if r.get('audioKey')==key:r['reveal_metadata']=metadata
+            credit_workers.submit(enrich)
         out['answer']=ans
     return out
 
@@ -347,21 +363,19 @@ def resolve_youtube(artist,title):
     return None,None
 
 def queue_youtube(r):
-    """Background-resolve the current race song video without blocking play."""
-    song=dict(r.get('song') or {});code=r.get('code')
-    if not song or r.get('mode')!='race':return
+    song=dict(r['song']);code=r['code'];key=r['audioKey'];audio_only=r.get('race_audio_only',False)
+    r['race_status']='buffering';r['race_error']=None
     def run():
         try:
-            vid,vtitle=resolve_youtube(song.get('artist',''),song.get('title',''))
-        except Exception:vid,vtitle=None,None
-        if not vid:return
+            vid,title=resolve_youtube(song['artist'],song['title'])
+            if not vid:raise ValueError('No playable video found. Retry or skip this song.')
+            path,duration,typ=prepare_race_media(DATA,vid,audio_only=audio_only)
+            result=dict(race_path=path,race_duration=duration,race_type=typ,race_status='ready',videoId=vid,videoTitle=title)
+        except Exception as e:result=dict(race_status='error',race_error=str(e))
         with lock:
-            # only stamp if room still on the same song
             cur=rooms.get(code)
-            if not cur or cur.get('song',{}).get('id')!=song.get('id'):return
-            cur['videoId']=vid;cur['videoTitle']=vtitle
-    try:video_workers.submit(run)
-    except Exception:pass
+            if cur and cur.get('audioKey')==key:cur.update(result)
+    video_workers.submit(run)
 FILTER_OPTIONS=filter_options()
 class Handler(BaseHTTPRequestHandler):
     protocol_version="HTTP/1.1"
@@ -393,6 +407,11 @@ class Handler(BaseHTTPRequestHandler):
                     r=rooms[q.get('room',[''])[0]]; p=q.get('token',[''])[0]
                     if p not in r['players']: raise ValueError('Invalid player session')
                     return self.reply(state(r,p))
+            if u.path.startswith('/race-media/'):
+                with lock:r=next((x for x in rooms.values() if x.get('audioKey')==u.path.split('/')[-1]),None);path=r.get('race_path') if r else None;typ=r.get('race_type') if r else None
+                if not path:return self.reply({'error':'Media not ready'},404)
+                b=pathlib.Path(path).read_bytes()
+                self.send_response(200);self.send_header('Content-Type',typ);self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b);return
             if u.path.startswith('/audio/'):
                 key=u.path.split('/')[-1]
                 with lock: r=next((r for r in rooms.values() if r.get('audioKey')==key),None); song=dict(r['song']) if r else None
@@ -440,7 +459,21 @@ class Handler(BaseHTTPRequestHandler):
                 p=d['token']
                 if p not in r['players']: raise ValueError('Invalid player session')
                 settle(r)
+                if action in ('race-ready','race-retry','race-skip','race-audio'):
+                    if r.get('mode')!='race' or r['phase']!='playing' or d.get('round')!=r['round']:raise ValueError('Round changed')
+                    if action=='race-ready' and r.get('race_status') in ('ready','playing'):
+                        r['race_ready'].add(p)
+                        if not r.get('race_started') and r['race_ready']>=set(r['players'])-set(r['guesses']):
+                            r['race_started']=time.time()+2;r['deadline']=r['race_started']+r['race_duration'];r['race_status']='playing'
+                    elif action=='race-audio' and not r.get('race_started') and not r.get('race_audio_only'):
+                        r['race_audio_only']=True;r['audioKey']=secrets.token_urlsafe(24);r['race_ready']=set();r.pop('race_path',None);queue_youtube(r)
+                    elif action=='race-retry' and r.get('race_status')=='error':queue_youtube(r)
+                    elif action=='race-skip':
+                        r['guesses'][p]=''
+                        if len(r['guesses'])==len(r['players']):r['phase']='reveal';r['winners']=[]
+                    return self.reply(state(r,p))
                 if action=='guess':
+                    if r.get('mode')=='race' and (not r.get('race_started') or time.time()<r['race_started']):raise ValueError('Waiting for media playback')
                     if r['phase']!='playing' or p in r['guesses']: raise ValueError('Guess already locked')
                     if r.get('mode')=='race':
                         if d.get('round')!=r['round']: raise ValueError('Stage changed; try again')
@@ -448,7 +481,7 @@ class Handler(BaseHTTPRequestHandler):
                     guess=str(d.get('id',''))
                     allowed=r['options'] if r['mode']=='choice' else [t for t in r['pool'] if t.get('genre')==r['song'].get('genre') and t.get('language')==r['song'].get('language')]
                     if guess and guess not in {t['id'] for t in allowed}: raise ValueError('Choose an answer from this round')
-                    r['guesses'][p]=guess; r.setdefault('guess_times',{})[p]=time.time()-r.get('race_started',time.time()); settle(r)
+                    r['guesses'][p]=guess; r.setdefault('guess_times',{})[p]=time.time()-(r.get('race_started') or time.time()); settle(r)
                 elif action=='lobby':
                     if p!=r['host'] or r['phase']!='finished':raise ValueError('Only the host can return a finished match to the lobby')
                     for player in r['players'].values():player['score']=0
