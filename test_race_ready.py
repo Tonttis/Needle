@@ -31,6 +31,9 @@ class RaceHTTPTests(fixtures.HTTPGameTests):
    with patch.object(s.time,'time',return_value=start+100):
     view=self.post('guess',dict(**host,round=1,id=room['song']['id']))
    self.assertEqual(view['phase'],'reveal');self.assertTrue(view['correct'])
+   with patch.object(s.time,'time',return_value=start+100):
+    loser=s.state(room,guest['token'])
+   self.assertEqual(loser['race_winners'],[room['players'][host['token']]['name']]);self.assertFalse(loser['correct'])
    del s.rooms[host['room']]
  def test_skip_failed_media(self):
   with patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'credit',side_effect=lambda t:t):

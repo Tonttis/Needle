@@ -66,20 +66,3 @@ node test_mix_ui.cjs
 All 50 Python tests and both JavaScript checks passed. The filter controller was tested in a simulated DOM; a local browser run was blocked because the browser binary could not be downloaded. The suite covers scoring, multiplayer game/lobby lifecycle, search, contributor enrichment, catalogue/preview caching, audio failure recovery and non-blocking latency. V7 adds explicit unknown-song rejection for Easy, regional recognition, genre standards, country/genre configuration, difficulty boundaries, familiarity-matched distractors and preservation of the full search catalogue.
 
 Selection simulations include 1,000 Europe games against a deliberately Finnish-heavy fixture and 500 Europe Easy games using the recognition anchors across both game modes. These verify artist rotation, Finland caps and Easy admission; they do not measure human recognition. Provider access here returned a Site Unavailable HTML response, so fresh live song resolution/playback is not verified in this environment.
-## V8.1 video readiness repair
-Built on the uploaded modified version. Video race downloads a complete 480p H.264 video with audio, falling back to full-length audio. FFprobe checks duration and the audio stream. Files are cached under data/race-media and cleaned automatically. A media file is limited to 80 MiB.
-
-Browsers fetch the complete file before playing; guessing is hidden until listeners have successfully unlocked playback. Autoplay restrictions show a Start playback button. Online rounds wait for every non-skipped player, then begin after a short shared countdown. The server uses actual media duration instead of 30 seconds. Retry/skip is available during loading errors; ordinary correct guesses still end the race. Late correct guesses earn at least one point. Home and round changes stop old playback. The video element survives state polls. Volume controls the actual player.
-
-Deploy the full package, including race_media.py, with the included Dockerfile (FFmpeg/ffprobe and yt-dlp required). Preserve .env and data/. Header: V8.1. No live deployment was performed. YouTube may block downloads or return an incorrect search result; those external conditions cannot be guaranteed. Browser/live YouTube playback could not be verified in this environment. Python regressions cover readiness, full-length timing, skip, scoring and multiplayer; JavaScript syntax was checked.
-
-## V8.2 YouTube search repair
-Corrects conflicting subprocess capture arguments that prevented every YouTube search from running. Explicitly enables the Docker-installed Node runtime for yt-dlp. Rebuild the image to update yt-dlp; the header shows V8.2. YouTube may still block the server or require authentication. Live playback was not verified here.
-
-## V8.3 playback and cache
-Race playback attempts to start automatically once downloaded; browser autoplay restrictions may require a click. The shared server starts the race after the players have unlocked playback. Cache files expire 30 days after download and least-recently-used files are removed above 2 GiB; in-use files are protected until a round ends. Cleanup runs at startup, hourly and on cache use. Temporary downloads may use extra space while in progress.
-
-The previous Spotify-preview message was incorrect: the optional reveal preview is an Apple iTunes Search preview; the Spotify link is a search link. The reveal now waits for that lookup and labels the fallback correctly. No Spotify API is configured.
-
-## V8.4 video race guesses
-Video Race allows repeated guesses. Incorrect guesses trigger a five-second per-player cooldown enforced by the server; correct guesses finish the race as before. The separate Skip song control remains available, including during cooldown. The snippet skip control is hidden in Video Race.
