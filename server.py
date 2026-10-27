@@ -1,6 +1,8 @@
 import math
+import unicodedata
 import logging
 import leaderboard as boards
+import spotify_lookup
 from race_media import prepare as prepare_race_media, start_janitor
 from playlists import match_playlist, identify as identify_playlist
 from audio_cache import AudioCache
@@ -464,18 +466,17 @@ def state(r,p):
         if r.get('mode')=='race':
             hist=r.get('history',[])
             if hist:ans['race_points']=hist[-1].get('race_points',0);ans['race_elapsed']=hist[-1].get('race_elapsed',0)
-        # Spotify check: no API key needed. iTunes Search (Apple) returns a
-        # 30s best-part preview + artwork + trackViewUrl for most tracks, and
-        # doubles as the Spotify-link resolver input. Deezer stays the game
-        # audio; this is reveal-only enrichment and never blocks reveal.
+        # Resolve Spotify in the background; gameplay and reveal never wait.
         ans.update(r.get('reveal_metadata',{}))
-        ans['preview_pending']=bool(r.get('reveal_pending') and not r.get('reveal_done'))
-        if not r.get('reveal_pending') and not r.get('reveal_metadata') and str(r['song'].get('preview','')).startswith('http'):
+        if not r.get('reveal_pending') and not r.get('reveal_done'):
             r['reveal_pending']=True
-            key=r['audioKey'];artist=ans['artist'];title=ans['title']
+            key=r['audioKey'];artist=r['song'].get('seed_artist') or ans['artist'].split(',')[0].strip();title=ans['title']
+            known_id=str(r['song'].get('spotify_id',''))
             def enrich():
-                try:metadata=spotify_enrich(artist,title)
-                except Exception:metadata={}
+                try:
+                    if __import__('re').fullmatch(r'[A-Za-z0-9]{22}',known_id):metadata={'spotify_id':known_id,'spotify_url':'https://open.spotify.com/track/'+known_id}
+                    else:metadata=spotify_lookup.resolve(artist,title)
+                except Exception as exc:metadata={'spotify_error':str(exc)}
                 with lock:
                     if r.get('audioKey')==key:r.update(reveal_metadata=metadata,reveal_done=True)
             credit_workers.submit(enrich)
@@ -483,69 +484,28 @@ def state(r,p):
         out['answer']=ans
     return out
 
-def _itunes_search(artist,title):
-    """Direct iTunes Search API call (not via Deezer fetch cache)."""
-    q=urllib.parse.quote((artist+' '+title).strip())
-    if not q:return None
-    url='https://itunes.apple.com/search?media=music&entity=song&limit=5&term='+q
-    request=urllib.request.Request(url,headers={'Accept':'application/json','User-Agent':'Needle/5'})
-    with urllib.request.urlopen(request,timeout=10) as response:
-        return json.load(response)
-    return None
-
-def spotify_enrich(artist,title):
-    """Best-effort reveal enrichment: Spotify search link + preview audio.
-
-    Uses the public iTunes Search API (no key, JSON) to find the track, then
-    builds an open.spotify.com search URL. Returns preview_url (usually the
-    chorus/best-part 30s), artwork and spotify link. Empty dict on miss.
-    Cached in-memory + sqlite like other metadata.
-    """
-    out={}
-    q=(artist+' '+title).strip()
-    if q:out['spotify_url']='https://open.spotify.com/search/'+urllib.parse.quote(q)
-    try:
-        with request_lock:
-            delay=.09-(time.monotonic()-last_request)
-            if delay>0:time.sleep(delay)
-        data=_itunes_search(artist,title)
-        if not isinstance(data,dict) or not data.get('results'):return out
-        want=norm(title)
-        best=None
-        for row in data['results']:
-            name=norm(str(row.get('trackName','')))
-            if not name:continue
-            if name==want or want in name or name in want:
-                best=row;break
-        if not best:return out
-        if best.get('previewUrl'):out['spotify_preview']=best['previewUrl']
-        if best.get('artworkUrl100'):out['spotify_art']=best['artworkUrl100'].replace('100x100','300x300')
-        if best.get('trackViewUrl'):out['apple_url']=best['trackViewUrl']
-    except Exception:pass
-    return out
 download_locks={}
 download_guard=threading.Lock()
 def download_lock(track_id):
     with download_guard:return download_locks.setdefault(track_id,threading.Lock())
-def load_audio(song):
-    if os.getenv('AUDIO_SOURCE','preview')=='youtube':
-        target=DATA/(song['id']+'.mp3')
-        with download_lock(song['id']):
-            if not target.exists():
-                subprocess.run(['yt-dlp','--no-playlist','--max-filesize','30M','--download-sections','*0-20','-x','--audio-format','mp3','-o',str(DATA/(song['id']+'.%(ext)s')),'ytsearch1:'+song['artist']+' '+song['title']+' official audio'],check=True,timeout=100,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        b=target.read_bytes(); typ='audio/mpeg'
-    else:
+def load_deezer_preview(song):
+    try:
+        return read_preview(song.get('preview',''))
+    except Exception:
+        # Expired URLs are refreshed for this exact track.
         try:
-            return read_preview(song.get('preview',''))
-        except Exception:
-            # Stored catalog URLs can expire before the catalog itself does.
-            # Refresh the exact track, bypassing both metadata caches.
-            try:
-                detail=fetch('track/'+song['id'],fresh=True)
-                return read_preview(detail.get('preview',''))
-            except Exception as error:
-                raise ValueError('This track preview is unavailable from the music provider. Retry playback or skip this track.') from error
-    return b,typ
+            detail=fetch('track/'+song['id'],fresh=True)
+            return read_preview(detail.get('preview',''))
+        except Exception as error:
+            raise ValueError('This track preview is unavailable from the music provider. Retry playback or skip this track.') from error
+
+def load_audio(song):
+    if os.getenv('AUDIO_SOURCE','preview')!='youtube':return load_deezer_preview(song)
+    target=DATA/(song['id']+'.mp3')
+    with download_lock(song['id']):
+        if not target.exists():
+            subprocess.run(['yt-dlp','--no-playlist','--max-filesize','30M','--download-sections','*0-20','-x','--audio-format','mp3','-o',str(DATA/(song['id']+'.%(ext)s')),'ytsearch1:'+song['artist']+' '+song['title']+' official audio'],check=True,timeout=100,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    return target.read_bytes(),'audio/mpeg'
 
 def read_preview(url):
     if not url or urllib.parse.urlparse(url).scheme not in ('https','http'):
@@ -559,7 +519,7 @@ def read_preview(url):
         return data,content
 
 audio_cache=AudioCache(load_audio)
-spotify_cache=AudioCache(lambda song: read_preview(song.get('spotify_preview','')))
+deezer_reveal_cache=AudioCache(load_deezer_preview)
 video_workers=ThreadPoolExecutor(max_workers=2)
 youtube_mem={}
 
@@ -646,6 +606,13 @@ def queue_youtube(r):
     video_workers.submit(run)
 start_janitor(DATA,active_race_media)
 FILTER_OPTIONS=filter_options()
+def require_player_name(value):
+    if not isinstance(value,str):raise ValueError('Enter your name (up to 24 characters).')
+    name=value.strip()
+    if not name or len(name)>24 or not any(not ch.isspace() and not unicodedata.category(ch).startswith('C') for ch in name):
+        raise ValueError('Enter your name (up to 24 characters).')
+    return name
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version="HTTP/1.1"
     def setup(self):
@@ -717,22 +684,22 @@ class Handler(BaseHTTPRequestHandler):
                 if not path:return self.reply({'error':'Media not ready'},404)
                 b=pathlib.Path(path).read_bytes()
                 self.send_response(200);self.send_header('Content-Type',typ);self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b);return
+            if u.path.startswith('/reveal-audio/'):
+                key=u.path.split('/')[-1]
+                with lock:
+                    r=next((r for r in rooms.values() if r.get('audioKey')==key and r.get('phase')=='reveal'),None)
+                    song=dict(r['song']) if r else None
+                if not song:return self.reply({'error':'Reveal audio unavailable or expired'},404)
+                source=os.getenv('AUDIO_SOURCE','preview')
+                cache=deezer_reveal_cache if source=='youtube' else audio_cache
+                cache_key=('deezer' if source=='youtube' else source)+':'+song['id']
+                b,typ=cache.get(cache_key,song)
+                self.send_response(200);self.send_header('Content-Type',typ);self.send_header('Content-Length',str(len(b)));self.send_header('Cache-Control','private, max-age=300');self.end_headers();self.wfile.write(b);return
             if u.path.startswith('/audio/'):
                 key=u.path.split('/')[-1]
                 with lock: r=next((r for r in rooms.values() if r.get('audioKey')==key),None); song=dict(r['song']) if r else None
                 if not song: return self.reply({'error':'Audio expired'},404)
                 b,typ=audio_cache.get(os.getenv('AUDIO_SOURCE','preview')+':'+song['id'],song)
-                self.send_response(200); self.send_header('Content-Type',typ); self.send_header('Content-Length',str(len(b))); self.send_header('Cache-Control','private, max-age=300'); self.end_headers(); self.wfile.write(b); return
-            if u.path.startswith('/spotify-audio/'):
-                key=u.path.split('/')[-1]
-                with lock: r=next((r for r in rooms.values() if r.get('audioKey')==key),None); ans=dict(r['song']) if r else None
-                if not ans: return self.reply({'error':'Audio expired'},404)
-                try:ans.update(spotify_enrich(ans.get('artist',''),ans.get('title','')))
-                except Exception:pass
-                preview_url=ans.get('spotify_preview','')
-                if not preview_url: return self.reply({'error':'No Spotify preview for this track'},404)
-                try:b,typ=spotify_cache.get('spotify:'+preview_url,{'spotify_preview':preview_url})
-                except Exception as e: return self.reply({'error':str(e)},404)
                 self.send_response(200); self.send_header('Content-Type',typ); self.send_header('Content-Length',str(len(b))); self.send_header('Cache-Control','private, max-age=300'); self.end_headers(); self.wfile.write(b); return
             path=ROOT/'static'/('index.html' if u.path=='/' else u.path.lstrip('/'))
             if not path.resolve().is_relative_to((ROOT/'static').resolve()) or not path.is_file(): return self.reply({'error':'Not found'},404)
@@ -769,15 +736,16 @@ class Handler(BaseHTTPRequestHandler):
             if action=='playlist-prepare':
                 token,_=prepare_playlist(str(d.get('url','')).strip());return self.reply({'job':token})
             if action=='daily-create':
+                name=require_player_name(d.get('name'))
                 day=boards.day_utc();snapshot=boards.daily_existing(day)
                 if snapshot is None:snapshot=boards.daily_snapshot(day,pool('Mixed','Europe','Easy'))
-                tracks,ids=snapshot;name=str(d.get('name','')).strip()[:24]
-                if not name:raise ValueError('Enter a name to play the daily challenge.')
+                tracks,ids=snapshot
                 with lock:
                     code=secrets.token_hex(3).upper();p=secrets.token_urlsafe(24)
                     r={'code':code,'match_id':secrets.token_urlsafe(24),'score_max':0,'daily_date':day,'daily_ids':ids,'hydrate':True,'created':time.time(),'players':{p:{'name':name,'score':0}},'host':p,'pool':tracks,'used':[],'mode':'guess','game_mode':'guess','party_modes':[],'base_difficulty':'Easy','multi':False,'genre':'Mixed','region':'Europe','difficulty':'Easy','decade':'All','phase':'lobby','round':0,'rounds':5,'stage':0,'deadline':0,'guesses':{},'history':[]}
                     rooms[code]=r;advance(r);return self.reply({'room':code,'token':p})
             if action=='create':
+                name=require_player_name(d.get('name'))
                 if d.get('mode')=='hits':d.update(genre='Mixed',region='Worldwide',difficulty='Hits')
                 playlist_url=str(d.get('playlist_url','')).strip()
                 playlist_report=None
@@ -797,7 +765,7 @@ class Handler(BaseHTTPRequestHandler):
                         if time.time()-rooms[c]['created']>86400: del rooms[c]
                     if len(rooms)>100: raise ValueError('Server room limit reached')
                     code=secrets.token_hex(3).upper(); p=secrets.token_urlsafe(24)
-                    r={'code':code,'match_id':secrets.token_urlsafe(24),'score_max':0,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits','race','party') else 'guess','game_mode':'party' if d.get('mode')=='party' else d.get('mode','guess'),'party_modes':party_modes,'playlist_report':playlist_report,'playlist_url':playlist_url,'base_difficulty':d.get('difficulty','Normal'),'multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'decade':d.get('decade','All'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[],
+                    r={'code':code,'match_id':secrets.token_urlsafe(24),'score_max':0,'hydrate':True,'created':time.time(),'players':{p:{'name':name,'score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits','race','party') else 'guess','game_mode':'party' if d.get('mode')=='party' else d.get('mode','guess'),'party_modes':party_modes,'playlist_report':playlist_report,'playlist_url':playlist_url,'base_difficulty':d.get('difficulty','Normal'),'multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'decade':d.get('decade','All'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[],
                        'previous_artists':[],'previous_songs':[]}
                     rooms[code]=r
                     if not r['multi']: advance(r)
@@ -833,8 +801,9 @@ class Handler(BaseHTTPRequestHandler):
                 r=rooms.get(str(d['room']).upper())
                 if not r:raise ValueError('This room could not be found. Ask for a new invite.')
                 if action=='join':
+                    name=require_player_name(d.get('name'))
                     if r['phase']!='lobby' or len(r['players'])>=8: raise ValueError('Room started or full')
-                    p=secrets.token_urlsafe(24); r['players'][p]={'name':str(d.get('name','Friend'))[:24] or 'Friend','score':0}; return self.reply({'room':r['code'],'token':p})
+                    p=secrets.token_urlsafe(24); r['players'][p]={'name':name,'score':0}; return self.reply({'room':r['code'],'token':p})
                 p=d['token']
                 if p not in r['players']: raise ValueError('Invalid player session')
                 settle(r)

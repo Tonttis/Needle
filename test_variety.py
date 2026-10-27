@@ -79,6 +79,7 @@ class HTTPGameTests(unittest.TestCase):
  @classmethod
  def tearDownClass(cls):cls.http.shutdown();cls.http.server_close()
  def post(self,path,data):
+    if path in ('create','join','daily-create') and 'name' not in data:data=dict(data,name='Test Player')
     req=urllib.request.Request(self.url+path,json.dumps(data).encode(),{'Content-Type':'application/json'})
     with urllib.request.urlopen(req) as r:return json.load(r)
  def test_both_modes_multiplayer_finished_and_lobby(self):

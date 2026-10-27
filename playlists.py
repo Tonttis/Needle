@@ -71,7 +71,7 @@ def source_tracks(url):
   for entry in items:
    t=(entry or {}).get('item') or (entry or {}).get('track') or {};artists=t.get('artists') or []
    if t.get('type','track')=='track' and not t.get('is_local') and t.get('name') and artists:
-    output.append(dict(artist=artists[0].get('name',''),title=t['name'],video_id=''))
+    output.append(dict(artist=artists[0].get('name',''),title=t['name'],video_id='',spotify_id=t.get('id','') if re.fullmatch(r'[A-Za-z0-9]{22}',str(t.get('id',''))) else ''))
   offset+=len(items)
  return output,total,provider
 
@@ -93,6 +93,8 @@ def match_playlist(url,fetch,clean,progress=None):
    if not candidates:return None
    raw=max(candidates,key=lambda x:x[0])[1];track=clean(raw)
    track.update(genre='Playlist',language='Playlist',region='Playlist',country='?',artist_id=str(raw['artist']['id']),rank=raw.get('rank',0),youtube_id=item['video_id'],hot_hit=is_hot_hit(raw['artist']['name'],raw['title']),playlist_track=True)
+   spotify_id=item.get('spotify_id','')
+   if re.fullmatch(r'[A-Za-z0-9]{22}',spotify_id):track.update(spotify_id=spotify_id,spotify_url='https://open.spotify.com/track/'+spotify_id)
    return track
   except (KeyError,ValueError):return None
  with ThreadPoolExecutor(max_workers=6) as workers:
