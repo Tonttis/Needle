@@ -1,33 +1,37 @@
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let mode='guess',session=JSON.parse(sessionStorage.getItem('needle')||'null'),state,last='',ctx,source,buffer,audioUrl='',polling=false,searchSeq=0,analyser,frequency,playGeneration=0,submitting=false,mutationEpoch=0,playbackGain;
+const STEPS_DISPLAY={guess:[.1,.5,2,8,15],choice:[5],hits:[.1,.5,2,8,15],race:[30]};
+function stepsFor(m){return STEPS_DISPLAY[m]||STEPS_DISPLAY.guess}
 const audioDownloads=new Map();
 function downloadAudio(url){if(!audioDownloads.has(url)){const task=fetch(url).then(async r=>{if(!r.ok){const detail=await r.json().catch(()=>({}));throw Error(detail.error||'Audio could not load. Retry playback.')}const bytes=await r.arrayBuffer();if(!bytes.byteLength)throw Error('Empty audio preview. Retry playback.');return bytes}).catch(e=>{audioDownloads.delete(url);throw e});audioDownloads.set(url,task);if(audioDownloads.size>3)audioDownloads.delete(audioDownloads.keys().next().value)}return audioDownloads.get(url)}
 $('#volume').value=localStorage.getItem('needle-volume')||'.7';
-$('#volume').oninput=()=>{const volume=Number($('#volume').value);localStorage.setItem('needle-volume',String(volume));if(playbackGain&&ctx)playbackGain.gain.setTargetAtTime(volume,ctx.currentTime,.015)};
+$('#volume').oninput=()=>{const volume=Number($('#volume').value);localStorage.setItem('needle-volume',String(volume));if(playbackGain&&ctx)playbackGain.gain.setTargetAtTime(volume,ctx.currentTime,.015)};try{const sa=document.querySelector('#spotify-audio');if(sa)sa.volume=volume}catch{};
 
 async function api(path,data){const r=await fetch('/api/'+path,data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:{});const v=await r.json();if(!r.ok)throw Error(v.error||'Request failed');return v}
 function error(e){$('#error').textContent=e.message}
 async function action(a,extra={}){mutationEpoch++;try{$('#error').textContent='';if(a==='create'){try{const prev=JSON.parse(localStorage.getItem('needle-prev')||'null');if(prev)extra={previous_artists:prev.artists,previous_songs:prev.songs,...extra}}catch{}}const v=await api(a,{...session,...extra});if(v.token){session=v;sessionStorage.setItem('needle',JSON.stringify(v));await refresh()}else if(v.phase){state=v;render();if(state.phase==='reveal'&&state.answer)renderRevealExtras(state.answer)}else await refresh()}catch(e){error(e)}}
 function renderRevealExtras(answer){
  try{
+  stop();
   let box=$('#reveal-extras');
   if(!box){
    box=document.createElement('div');box.id='reveal-extras';box.className='reveal-extras';
    const anchor=$('#answer');
    (anchor&&anchor.parentElement?anchor.parentElement:document.body).appendChild(box);
   }
-  const spotifyUrl=answer.spotify_url||'';
   const hasPreview=!!answer.spotify_preview;
+  const ytUrl=answer.videoId?'https://www.youtube.com/watch?v='+answer.videoId:(answer.artist&&answer.title?'https://www.youtube.com/results?search_query='+encodeURIComponent(answer.artist+' '+answer.title+' official video'):'');
   box.innerHTML=
-   (spotifyUrl?'<a class="spotify-open" target="_blank" rel="noopener" href="'+esc(spotifyUrl)+'">Open in Spotify ↗</a>':'')+
-   (hasPreview?'<button id="spotify-play" type="button">▶ Spotify best-part preview</button><audio id="spotify-audio" preload="none"></audio>':'<span class="muted">Spotify preview unavailable for this track.</span>');
-  const btn=$('#spotify-play'),audio=$('#spotify-audio');
-  if(btn&&audio){
-   // Deezer stays the game audio; this reveal-only player streams the
-   // iTunes best-part 30s via the server proxy (keeps HTTPS + caching).
+   (answer.race_points!=null?'<span class="muted">Race: +'+answer.race_points+' pts in '+(answer.race_elapsed||0)+'s</span>':'')+
+   (ytUrl?'<a class="yt-open" target="_blank" rel="noopener" href="'+esc(ytUrl)+'">Watch on YouTube</a>':'')+
+   (hasPreview?'<audio id="spotify-audio" preload="auto"></audio>':'<span class="muted">Spotify preview unavailable &mdash; playing Deezer instead.</span>');
+  const audio=$('#spotify-audio');
+  if(audio){
+   try{audio.volume=+($('#volume').value||.7)}catch{}
    audio.src='/spotify-audio/'+(state.audio||'').split('/').pop();
-   btn.onclick=async()=>{try{if(!audio.paused){audio.pause();btn.textContent='▶ Spotify best-part preview';return}await audio.play();btn.textContent='■ Playing Spotify preview'}catch(e){error(e)}};
-   audio.onended=()=>{btn.textContent='▶ Spotify best-part preview'};
-   audio.onerror=()=>{btn.textContent='Spotify preview unavailable';btn.disabled=true};
+   audio.play().catch(()=>{});
+   audio.onerror=()=>{try{$('#play').click()}catch(e){error(e)}};
+  }else{
+   try{if(ctx){const revealAudio=state.audio;queueMicrotask(()=>{if(state&&state.phase==='reveal'&&state.audio===revealAudio)$('#play').click()})}}catch{}
   }
  }catch{}
 }
@@ -40,7 +44,7 @@ window.addEventListener('popstate',()=>{goHome();history.pushState({needle:'app'
 function renderHome(){$('#home').hidden=false;$('#game').hidden=true;window.dispatchEvent(new CustomEvent('needle:screen',{detail:{home:true}}))}
 $('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/?room='+session.room);$('#share').textContent='Invite copied ✓'}catch(e){$('#error').textContent='Room code: '+session.room}};
 $('#next').onclick=()=>action('next');$('#return-lobby').onclick=()=>action('lobby');$('#finish-home').onclick=goHome;$('#skip').onclick=()=>guess('');async function guess(id){if(submitting||!state||state.submitted||state.phase!=='playing')return;submitting=true;try{ctx ||= new AudioContext();await ctx.resume()}catch{}stop();document.querySelectorAll('#choices button,#results button,#skip').forEach(b=>b.disabled=true);await action('guess',{id,round:state.round,stage:state.stage});submitting=false;if(state?.phase==='playing'&&!state.submitted)document.querySelectorAll('#choices button,#results button,#skip').forEach(b=>b.disabled=false)}
-function stop(){playGeneration++;document.body.classList.remove('is-playing');window.dispatchEvent(new CustomEvent('needle:audio',{detail:{playing:false}}));if(source){const old=source;source=null;old.onended=null;try{old.stop()}catch{}}$('#play').textContent='▶'}
+function stop(){try{const sa=document.querySelector('#spotify-audio');if(sa){sa.pause()}}catch{}playGeneration++;document.body.classList.remove('is-playing');window.dispatchEvent(new CustomEvent('needle:audio',{detail:{playing:false}}));if(source){const old=source;source=null;old.onended=null;try{old.stop()}catch{}}$('#play').textContent='▶'}
 $('#play').onclick=async()=>{
  if(source||$('#play').textContent==='…'){stop();return}
  const generation=++playGeneration, current=state; if(!current)return;
@@ -56,7 +60,8 @@ $('#play').onclick=async()=>{
  }catch(e){audioDownloads.delete(current.audio);if(generation===playGeneration){stop();error(e)}}
 };
 async function refresh(){if(!session||polling)return;polling=true;try{const active=session,epoch=mutationEpoch;const v=await api('state?room='+active.room+'&token='+active.token);if(session!==active||epoch!==mutationEpoch)return;const wasReveal=state&&state.phase==='reveal'&&state.round===v.round&&state.stage===v.stage;state=v;render();if(state.phase==='reveal'&&state.answer&&!wasReveal)renderRevealExtras(state.answer)}catch(e){error(e)}finally{polling=false}}
-function render(){$('#game').classList.toggle('finished',state.phase==='finished');$('#wrapup').hidden=state.phase!=='finished';if(state.phase==='finished')renderFinal();$('#catalog-info').textContent=state.catalog?(state.catalog.answers??state.catalog.tracks)+' eligible songs · '+state.catalog.artists+' artists · '+state.catalog.tracks+' searchable tracks':'';$('#home').hidden=true;$('#game').hidden=false;window.dispatchEvent(new CustomEvent('needle:screen',{detail:{home:false}}));const key=state.round+':'+state.stage+':'+state.phase;if(key!==last){stop();$('#search').value='';$('#results').innerHTML='';last=key; if(state.audio&&state.phase==='playing')downloadAudio(state.audio).catch(()=>{}); searchSeq++; $('.answer-hint').textContent='Type at least 2 characters · up to 25 matching suggestions'; $('#skip').disabled=false; if(state.phase==='reveal'&&ctx){const revealAudio=state.audio;queueMicrotask(()=>{if(state?.phase==='reveal'&&state.audio===revealAudio)$('#play').click()})}}$('#roundLabel').textContent=state.multi?'ROOM '+state.code+' / '+state.round+' OF '+state.rounds:'TRACK '+state.round+' / '+state.rounds;$('#scores').innerHTML=state.players.map(p=>'<span class="score">'+esc(p.name)+(p.me?' · you':'')+(p.submitted?' ✓':'')+'<b>'+p.score+'</b></span>').join('');$('#status').textContent=state.region.toUpperCase()+' · '+state.genre.toUpperCase()+' · '+state.difficulty.toUpperCase()+' / '+(state.mode==='choice'?'PICK THE SONG':state.mode==='hits'?'HOTTEST HITS':'NAME THE SONG');$('#headline').textContent=state.phase==='lobby'?'Your listening room.':state.phase==='finished'?'That’s a wrap.':state.phase==='reveal'?(state.correct?'You got it!':state.result==='skipped'?'No guess this time.':'Not this one.'):state.submitted?'Guess locked in.':'Sounds familiar?';$('.disc').hidden=['lobby','finished'].includes(state.phase);$('#steps').innerHTML=state.phase==='lobby'?'Share your room code. Friends can join before you start.':(state.mode==='choice'?[5]:[.1,.5,2,8,15]).map((n,i)=>'<span class="step '+(i===state.stage?'active':'')+'">'+n+'s</span>').join('');$('#guessbox').hidden=state.phase!=='playing'||state.mode==='choice'||state.submitted;$('#choices').hidden=state.phase!=='playing'||state.mode!=='choice'||state.submitted;const optionKey=JSON.stringify(state.options||[])+':'+state.round;if($('#choices').dataset.key!==optionKey){$('#choices').dataset.key=optionKey;$('#choices').innerHTML=(state.options||[]).map(o=>'<button data-id="'+esc(o.id)+'">'+esc(o.title)+'<br><small>'+esc(o.artist)+'</small></button>').join('');$('#choices').querySelectorAll('button').forEach(b=>b.onclick=()=>guess(b.dataset.id));}$('#answer').innerHTML=state.answer?'<p class="result-label '+(state.correct?'result-correct':'result-wrong')+'">'+(state.correct?'✓ Correct answer':'✕ '+(state.result==='skipped'?'Skipped or timed out':'Incorrect answer'))+'</p><img alt="Album artwork" src="'+esc(state.answer.art)+'"><h2>'+esc(state.answer.title)+'</h2><p>'+esc(state.answer.artist)+'</p><a target="_blank" rel="noopener" href="'+esc(state.answer.link)+'">Listen to the song ↗</a>':'';$('#next').hidden=!state.host||!['lobby','reveal'].includes(state.phase);$('#next').textContent=state.phase==='lobby'?'Everyone here? Start →':state.round>=state.rounds?'See final scores →':'Next song →';$('#clock').textContent=state.phase==='playing'?(state.submitted?'Waiting for the other listeners · ':'')+Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds to guess':state.phase==='finished'?state.players.slice().sort((a,b)=>b.score-a.score).map(p=>p.name+' · '+p.score).join(' / '):''}
+function render(){$('#game').classList.toggle('finished',state.phase==='finished');$('#wrapup').hidden=state.phase!=='finished';if(state.phase==='finished')renderFinal();
+renderRaceVideo();$('#catalog-info').textContent=state.catalog?(state.catalog.answers??state.catalog.tracks)+' eligible songs · '+state.catalog.artists+' artists · '+state.catalog.tracks+' searchable tracks':'';$('#home').hidden=true;$('#game').hidden=false;window.dispatchEvent(new CustomEvent('needle:screen',{detail:{home:false}}));const key=state.round+':'+state.stage+':'+state.phase;if(key!==last){stop();$('#search').value='';$('#results').innerHTML='';last=key; if(state.audio&&state.phase==='playing')downloadAudio(state.audio).catch(()=>{}); searchSeq++; $('.answer-hint').textContent='Type at least 2 characters · up to 25 matching suggestions'; $('#skip').disabled=false; /* reveal autoplay handled by renderRevealExtras: Spotify default, Deezer fallback */}$('#roundLabel').textContent=state.multi?'ROOM '+state.code+' / '+state.round+' OF '+state.rounds:'TRACK '+state.round+' / '+state.rounds;$('#scores').innerHTML=state.players.map(p=>'<span class="score">'+esc(p.name)+(p.me?' · you':'')+(p.submitted?' ✓':'')+'<b>'+p.score+'</b></span>').join('');$('#status').textContent=state.region.toUpperCase()+' · '+state.genre.toUpperCase()+' · '+state.difficulty.toUpperCase()+' / '+raceLabel();$('#headline').textContent=state.phase==='lobby'?'Your listening room.':state.phase==='finished'?'That’s a wrap.':state.phase==='reveal'?(state.correct?'You got it!':state.result==='skipped'?'No guess this time.':'Not this one.'):state.submitted?'Guess locked in.':'Sounds familiar?';$('.disc').hidden=['lobby','finished'].includes(state.phase)||state.mode==='race';$('#steps').innerHTML=state.phase==='lobby'?'Share your room code. Friends can join before you start.':stepsFor(state.mode).map((n,i)=>'<span class="step '+(i===state.stage?'active':'')+'">'+n+'s</span>').join('');$('#guessbox').hidden=state.phase!=='playing'||state.mode==='choice'||state.submitted;$('#choices').hidden=state.phase!=='playing'||state.mode!=='choice'||state.submitted;const optionKey=JSON.stringify(state.options||[])+':'+state.round;if($('#choices').dataset.key!==optionKey){$('#choices').dataset.key=optionKey;$('#choices').innerHTML=(state.options||[]).map(o=>'<button data-id="'+esc(o.id)+'">'+esc(o.title)+'<br><small>'+esc(o.artist)+'</small></button>').join('');$('#choices').querySelectorAll('button').forEach(b=>b.onclick=()=>guess(b.dataset.id));}$('#answer').innerHTML=state.answer?'<p class="result-label '+(state.correct?'result-correct':'result-wrong')+'">'+(state.correct?'✓ Correct answer':'✕ '+(state.result==='skipped'?'Skipped or timed out':'Incorrect answer'))+'</p><img alt="Album artwork" src="'+esc(state.answer.art)+'"><h2>'+esc(state.answer.title)+'</h2><p>'+esc(state.answer.artist)+'</p><div class="listen-row">'+(state.answer.link?'<a class="deezer-open" target="_blank" rel="noopener" href="'+esc(state.answer.link)+'">Listen on Deezer</a>':'')+(state.answer.spotify_url?'<a class="spotify-open" target="_blank" rel="noopener" href="'+esc(state.answer.spotify_url)+'">Open in Spotify</a>':'')+'</div>'':'';$('#next').hidden=!state.host||!['lobby','reveal'].includes(state.phase);$('#next').textContent=state.phase==='lobby'?'Everyone here? Start →':state.round>=state.rounds?'See final scores →':'Next song →';$('#clock').textContent=state.phase==='playing'?(state.submitted?'Waiting for the other listeners · ':'')+Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds to guess':state.phase==='finished'?state.players.slice().sort((a,b)=>b.score-a.score).map(p=>p.name+' · '+p.score).join(' / '):''}
 let searchTimer;
 $('#search').oninput=()=>{
  clearTimeout(searchTimer);const sequence=++searchSeq,term=$('#search').value.trim(),active=session,round=state.round,stage=state.stage;
@@ -68,8 +73,27 @@ $('#search').oninput=()=>{
  const rows=data.results;$('.answer-hint').textContent=rows.length+' matching suggestions · click to lock your guess';
  $('#results').innerHTML=rows.map(t=>'<button data-id="'+esc(t.id)+'"><span>'+esc(t.title)+'</span><small>'+esc(t.artist)+'</small><span class="answer-arrow">↗</span></button>').join('')||'<p class="muted">No matches. Try a different title or artist.</p>';
  $('#results').querySelectorAll('button').forEach(b=>b.onclick=()=>guess(b.dataset.id));
- }catch(e){if(sequence===searchSeq)error(e)}},250);
+  }catch(e){if(sequence===searchSeq)error(e)}},250);
 };
+
+function raceLabel(){return state&&state.mode==='race'?'VIDEO RACE':state.mode==='choice'?'PICK THE SONG':state.mode==='hits'?'HOTTEST HITS':'NAME THE SONG'}
+function renderRaceVideo(){
+ let box=$('#race-video');
+ if(!state||state.mode!=='race'||state.phase!=='playing'){if(box)box.innerHTML='';return}
+ if(!box){
+  box=document.createElement('div');box.id='race-video';box.className='race-video';
+  const anchor=$('.disc')||$('#answer');(anchor&&anchor.parentElement?anchor.parentElement:document.body).appendChild(box);
+ }
+ const vid=state.videoId;
+ const elapsed=state.elapsed||0,left=Math.max(0,30-elapsed);
+ box.innerHTML=
+  (vid
+   ?'<div class="race-frame"><iframe src="https://www.youtube-nocookie.com/embed/'+esc(vid)+'?autoplay=1&rel=0&modestbranding=1&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe><div class="race-mask"></div></div>'
+   :'<div class="race-fallback">Finding video… playing audio. <button id="race-retry" type="button">Retry video</button></div>')+
+  '<div class="race-timer"><span style="width:'+(left/30*100)+'%"></span></div><div class="muted">⏱ '+left.toFixed(0)+'s left · fastest correct wins · skip = 0</div>';
+ const retry=$('#race-retry');
+ if(retry)retry.onclick=()=>refresh();
+}
 $('#code').value=new URLSearchParams(location.search).get('room')||'';setInterval(refresh,1000);refresh();
 
 
@@ -91,9 +115,10 @@ function renderFinal(){
 let warmTimer,mixConfig;
 const difficultyHelp={Easy:'Recognisable hits only. Europe Easy favours cross-border anthems. Obscure tracks never fill an Easy pool.',Medium:'Known hits plus strong catalogue favourites. Worldwide and Europe Medium include crossover hits.',Hard:'Mid-catalogue singles and fan favourites. No Easy anthems here.',Expert:'Album cuts and deeper catalogue. For collectors.',Impossible:'The deepest end of the available catalogue. Expect obscurity.'};
 function syncMix(){
- if(!mixConfig)return;
- ['#genre','#region','#difficulty'].forEach(id=>$(id).parentElement.hidden=mode==='hits');
- if(mode==='hits'){$('#mix-help').textContent='Hottest Hits: all-time singalong favourites, iconic hooks and international anthems. Five snippets, solo or with friends. A stricter song selection than Easy — no deep cuts.';warmCatalog();return}
+  if(!mixConfig)return;
+  ['#genre','#region','#difficulty'].forEach(id=>$(id).parentElement.hidden=(mode==='hits'||mode==='race'));
+  if(mode==='hits'){$('#mix-help').textContent='Hottest Hits: all-time singalong favourites, iconic hooks and international anthems. Five snippets, solo or with friends. A stricter song selection than Easy — no deep cuts.';warmCatalog();return}
+  if(mode==='race'){$('#mix-help').textContent='Video race: the music video (or audio + artwork) plays for 30 seconds. Type to guess — fastest correct wins. Skip scores 0. Solo: faster = more points.';warmCatalog();return}
  const supported=mixConfig.support[$('#region').value]||{};
  const previousGenre=$('#genre').value,previousDifficulty=$('#difficulty').value;
  $('#genre').innerHTML=mixConfig.genres.map(g=>'<option'+(!supported[g]?' disabled':'')+'>'+esc(g)+'</option>').join('');

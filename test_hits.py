@@ -20,9 +20,23 @@ class HitsSelectionTests(unittest.TestCase):
   self.assertTrue(rec.is_hot_hit('Queen','We Will Rock You'))
   self.assertFalse(rec.is_hot_hit('Queen','The Prophet\'s Song'))
   self.assertTrue(rec.is_hot_hit('Eminem','Without Me - 2002 Remaster'))
- def test_hits_are_a_separate_filter(self):
-  self.assertTrue(rec.in_difficulty({'hot_hit':True,'recognition':78},'Hits'))
-  self.assertFalse(rec.in_difficulty({'hot_hit':False,'recognition':94},'Hits'))
+  def test_hits_are_a_separate_filter(self):
+   self.assertTrue(rec.in_difficulty({'hot_hit':True,'recognition':78},'Hits'))
+   self.assertFalse(rec.in_difficulty({'hot_hit':False,'recognition':94},'Hits'))
+
+ def test_race_points_and_first_wins(self):
+  from server import race_points, settle_race
+  self.assertEqual([race_points(x) for x in [1,5,10,20,28,31]],[5,4,3,2,1,0])
+  room=dict(pool=[],used=[],difficulty='Medium',rounds=3,region='Worldwide',mode='race',multi=False,
+            players={'a':{'name':'A','score':0}},song={'id':'s1','artist_id':'x'},race_started=1000.0,deadline=1030.0,guesses={'a':'s1'},guess_times={'a':2.0})
+  import server as s
+  s.settle_race(room)
+  self.assertEqual(room['phase'],'reveal');self.assertEqual(room['players']['a']['score'],5)
+  room=dict(pool=[],used=[],difficulty='Medium',rounds=3,region='Worldwide',mode='race',multi=True,
+            players={'a':{'name':'A','score':0},'b':{'name':'B','score':0}},song={'id':'s1','artist_id':'x'},race_started=1000.0,deadline=1030.0,
+            guesses={'a':'s1','b':'s1'},guess_times={'a':9.0,'b':2.0})
+  s.settle_race(room)
+  self.assertEqual(room['winners'],['b']);self.assertEqual(room['players']['b']['score'],5);self.assertEqual(room['players']['a']['score'],0)
 
 class HitsHTTPTests(fixtures.HTTPGameTests):
  def test_hits_preset_search_scoring_and_online(self):
