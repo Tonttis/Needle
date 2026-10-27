@@ -401,6 +401,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({'ready':job.done() and job.exception() is None})
             if u.path=='/api/genres': return self.reply(CATALOG_GENRES)
             if u.path=='/api/config': return self.reply(FILTER_OPTIONS)
+            if u.path=='/api/invite':
+                code=q.get('room',[''])[0].upper()
+                with lock:
+                    r=rooms.get(code)
+                    if not r:return self.reply({'error':'This room could not be found. Ask for a new invite.'},404)
+                    if not r.get('multi'):return self.reply({'error':'This is not a multiplayer room.'},400)
+                    return self.reply({'room':code,'host':r['players'][r['host']]['name'],'mode':r['mode'],'genre':r['genre'],'region':r['region'],'difficulty':r['difficulty'],'rounds':r['rounds'],'players':len(r['players']),'joinable':r['phase']=='lobby' and len(r['players'])<8,'reason':'This game has already started.' if r['phase']!='lobby' else 'This room is full.' if len(r['players'])>=8 else ''})
             if u.path=='/api/search':
                 with lock:
                     r=rooms[q.get('room',[''])[0]]
@@ -462,7 +469,8 @@ class Handler(BaseHTTPRequestHandler):
                     if not r['multi']: advance(r)
                     return self.reply({'room':code,'token':p})
             with lock:
-                r=rooms[str(d['room']).upper()]
+                r=rooms.get(str(d['room']).upper())
+                if not r:raise ValueError('This room could not be found. Ask for a new invite.')
                 if action=='join':
                     if r['phase']!='lobby' or len(r['players'])>=8: raise ValueError('Room started or full')
                     p=secrets.token_urlsafe(24); r['players'][p]={'name':str(d.get('name','Friend'))[:24] or 'Friend','score':0}; return self.reply({'room':r['code'],'token':p})

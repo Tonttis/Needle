@@ -22,3 +22,5 @@ body[data-motion=full] .vinyl,body[data-motion=calm] .vinyl{animation:visible-sp
 #skip[hidden]{display:none}
 
 .correct-players{color:var(--lime);font-size:14px;margin:4px 0 18px;font-weight:600}
+
+.invite-screen{min-height:60vh;display:grid;place-items:center}.invite-screen[hidden]{display:none}.invite-card{width:min(100%,620px);padding:clamp(26px,5vw,52px);background:linear-gradient(145deg,#242d20,#181d19);border:1px solid #46583b;border-radius:26px;box-shadow:0 24px 80px #0005}.invite-card h1{font-size:clamp(40px,6vw,64px)}.invite-description{color:var(--muted);line-height:1.6}.invite-details{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0}.invite-details[hidden]{display:none}.invite-details span{padding:9px 12px;background:#101810;border:1px solid #3a4931;border-radius:100px;color:#dcefc1;font-size:13px}.invite-card form{display:grid;gap:10px;margin-top:28px}.invite-card form label{font-size:13px;color:var(--muted)}.invite-card form button{margin-top:6px}.invite-home{padding:10px 0;border:0;background:transparent;color:var(--muted)}#invite-error{color:#ffacaa;min-height:1em}
