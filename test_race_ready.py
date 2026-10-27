@@ -18,7 +18,7 @@ from unittest.mock import patch
 import test_variety as fixtures
 class RaceHTTPTests(fixtures.HTTPGameTests):
  def test_all_players_ready_before_full_length_clock(self):
-  with patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'credit',side_effect=lambda t:t):
+  with patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'queue_prefetch'),patch.object(s,'credit',side_effect=lambda t:t):
    host=self.post('create',dict(mode='race',multi=True))
    guest=self.post('join',dict(room=host['room'],name='Guest'))
    view=self.post('next',host);room=s.rooms[host['room']]
@@ -36,13 +36,13 @@ class RaceHTTPTests(fixtures.HTTPGameTests):
    self.assertEqual(loser['race_winners'],[room['players'][host['token']]['name']]);self.assertFalse(loser['correct'])
    del s.rooms[host['room']]
  def test_skip_failed_media(self):
-  with patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'credit',side_effect=lambda t:t):
+  with patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'queue_prefetch'),patch.object(s,'credit',side_effect=lambda t:t):
    host=self.post('create',dict(mode='race',multi=False));s.rooms[host['room']]['race_status']='error'
    view=self.post('race-skip',dict(**host,round=1));self.assertEqual(view['phase'],'reveal')
    del s.rooms[host['room']]
  def test_wrong_guesses_retry_after_cooldown_and_skip(self):
   import urllib.error
-  with patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'credit',side_effect=lambda t:t):
+  with patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'queue_prefetch'),patch.object(s,'credit',side_effect=lambda t:t):
    host=self.post('create',dict(mode='race',multi=False));room=s.rooms[host['room']]
    start=time.time()-20;room.update(race_started=start,race_status='playing',deadline=start+300)
    correct=room['song'];wrong=next(t for t in room['pool'] if t['id']!=correct['id'] and t['genre']==correct['genre'] and t['language']==correct['language'])

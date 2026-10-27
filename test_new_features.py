@@ -48,7 +48,7 @@ class PartyTests(fixture.HTTPGameTests):
  def test_mixed_rounds_and_complete_recap(self):
   tracks=fixture.fixture_tracks()
   for t in tracks:t['hot_hit']=True
-  with patch.object(s,'pool',return_value=tracks),patch.object(s,'queue_youtube'),patch.object(s,'credit',side_effect=lambda t:t):
+  with patch.object(s,'pool',return_value=tracks),patch.object(s,'queue_youtube'),patch.object(s,'queue_prefetch'),patch.object(s,'credit',side_effect=lambda t:t):
    host=self.post('create',dict(mode='party',party_modes=['guess','choice','race','hits'],multi=False,rounds=4,name='DJ'))
    room=s.rooms[host['room']];modes=[]
    for i in range(4):

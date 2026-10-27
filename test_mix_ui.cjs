@@ -24,6 +24,6 @@ setImmediate(()=>{try{
  elements['#region'].value='Finland';elements['#genre'].value='Jazz';vm.runInContext('syncMix()',scope);
  assert.equal(elements['#genre'].value,'Mixed');assert.ok(elements['#genre'].options.find(o=>o.value==='Jazz').disabled);
  scope.mode='hits';vm.runInContext('syncMix()',scope);assert.equal(elements['#genre'].parentElement.hidden,true);assert.match(elements['#mix-help'].textContent,/Hottest Hits/);
- scope.mode='guess';vm.runInContext('syncMix()',scope);assert.equal(elements['#genre'].parentElement.hidden,false);
+ scope.mode='playlist';vm.runInContext('syncMix()',scope);assert.equal(elements['#decade'].parentElement.hidden,true);scope.mode='guess';vm.runInContext('syncMix()',scope);assert.equal(elements['#genre'].parentElement.hidden,false);assert.equal(elements['#decade'].parentElement.hidden,false);
  console.log('Filter UI: every supported scene/genre, difficulty fallback, and unsupported choices passed.');
 }catch(e){console.error(e);process.exitCode=1}});

@@ -2,7 +2,7 @@
 Region means artist scene/origin, language is a predominant-language editorial hint.
 """
 import random, re, unicodedata
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor,as_completed
 
 def norm(s):
     return ' '.join(''.join(c for c in unicodedata.normalize('NFKD',s.casefold()) if not unicodedata.combining(c)).split())
@@ -100,7 +100,7 @@ def title_key(t):
 def band(tracks,difficulty):
     return [t for t in tracks if in_difficulty(t,difficulty)]
 
-def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
+def build_pool(fetch,clean,genre,region,difficulty,target_artists=80,progress=None):
     seeds=eligible(genre,region)
     if not seeds: raise ValueError('That genre/region combination has no curated artists yet. Choose another mix.')
     # Country-first discovery prevents a heavily populated local lane dominating.
@@ -142,9 +142,13 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
     target=min(target_artists,len(selected))
     # Retry with fresh artists if some lookups fail, rather than silently starting
     # a tiny game from the first two artists whose requests happened to succeed.
+    if progress:progress('artists',0,target)
     with ThreadPoolExecutor(max_workers=6) as workers:
         for start in range(0,min(len(selected),160),40):
-            groups.extend(workers.map(load,selected[start:start+40]))
+            futures=[workers.submit(load,seed) for seed in selected[start:start+40]]
+            for future in as_completed(futures):
+                groups.append(future.result())
+                if progress:progress('artists',len(groups),target)
             if start==0 and not any(groups):
                 raise ValueError('The music provider returned no playable artists. Check connectivity and retry.')
             tracks={t['id']:t for group in groups for t in group}

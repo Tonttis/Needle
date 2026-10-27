@@ -36,11 +36,46 @@ function renderRevealExtras(answer){
  }catch{}
 }
 function selectedGameMode(){return mode==='playlist'?$('#playlist-mode').value:mode}
-function updateModeSelection(){const custom=mode==='playlist';$('#playlist-field').hidden=!custom;$('#playlist-mode-field').hidden=!custom;$('#playlist-hint').hidden=!custom;$('#party-settings').hidden=selectedGameMode()!=='party';syncMix()}
+function updateModeSelection(){const custom=mode==='playlist';$('#decade').parentElement.hidden=custom;$('#playlist-field').hidden=!custom;$('#playlist-mode-field').hidden=!custom;$('#playlist-hint').hidden=!custom;$('#party-settings').hidden=selectedGameMode()!=='party';syncMix()}
 document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('selected',x===b));updateModeSelection()});
 $('#playlist-mode').addEventListener('change',updateModeSelection);
-async function create(multi){$('#solo').disabled=$('#create').disabled=true;$('#solo').textContent='Preparing full mix…';$('#error').textContent='Building a broad mix of artists… Cached mixes start immediately; new mixes load in the background.';const chosenMode=selectedGameMode(),playlist=mode==='playlist'?$('#playlist-url').value.trim():'';if(mode==='playlist'&&!playlist){$('#error').textContent='Paste a playlist link to start.';$('#playlist-url').focus();$('#solo').disabled=$('#create').disabled=false;$('#solo').textContent='Start listening ↗';return}const party_modes=[...document.querySelectorAll('#party-settings input:checked')].map(x=>x.value);if(chosenMode==='party'&&!party_modes.length){$('#error').textContent='Choose at least one Party mode.';$('#solo').disabled=$('#create').disabled=false;$('#solo').textContent='Start listening ↗';return}await action('create',{mode:chosenMode,party_modes,playlist_url:playlist,multi,name:$('#name').value,genre:$('#genre').value,region:$('#region').value,difficulty:$('#difficulty').value,decade:$('#decade').value,rounds:+$('#rounds').value});$('#solo').disabled=$('#create').disabled=false;$('#solo').textContent='Start listening ↗'}
-$('#solo').onclick=()=>create(false);$('#create').onclick=()=>create(true);$('#join').onclick=()=>action('join',{room:$('#code').value.trim().toUpperCase(),name:$('#name').value});function goHome(){$('#race-video video')?.pause();stop();session=null;state=null;last='';searchSeq++;sessionStorage.removeItem('needle');$('#error').textContent='';renderHome()}
+let importGeneration=0;
+$('#playlist-cancel').onclick=()=>{importGeneration++;$('#playlist-progress').hidden=true;$('#solo').disabled=$('#create').disabled=false;$('#solo').textContent='Start listening ↗';$('#error').textContent='Preparation cancelled.'};
+async function waitForPreparation(kind,parameters,generation){
+ const job=await api(kind+'-prepare',parameters);
+ while(generation===importGeneration){
+  const progress=await api(kind+'-status?job='+encodeURIComponent(job.job));
+  if(generation!==importGeneration)throw Error('Cancelled');
+  if(progress.phase==='error')throw Error(progress.error||'Playlist preparation failed.');
+  const bar=$('#playlist-progress-bar'),label=$('#playlist-progress-label'),count=$('#playlist-progress-count');
+  if(progress.phase==='ready'){$('#playlist-cancel').hidden=true;bar.value=100;label.textContent=kind==='playlist'?'Playlist ready':'Mix ready';count.textContent=kind==='playlist'?progress.matched+'/'+progress.total+' matched':'';return}
+  if(progress.phase==='matching'&&progress.total>0){bar.value=Math.round(100*progress.completed/progress.total);label.textContent='Matching songs to playable previews…';count.textContent=progress.completed+'/'+progress.total+' checked'}
+  else if(progress.phase==='artists'&&progress.total>0){bar.value=Math.min(95,Math.round(100*progress.completed/progress.total));label.textContent='Finding artists and songs…';count.textContent=progress.completed+' artists checked'}
+  else if(progress.phase==='dates'&&progress.total>0){bar.value=Math.min(95,Math.round(100*progress.completed/progress.total));label.textContent='Checking release dates…';count.textContent=progress.completed+'/'+progress.total+' albums checked'}
+  else{bar.removeAttribute('value');label.textContent=progress.phase==='filtering'?'Preparing tracks…':kind==='playlist'?'Reading playlist…':'Preparing your mix…';count.textContent='This can take a little while'}
+  await new Promise(resolve=>setTimeout(resolve,1000));
+ }
+ throw Error('Cancelled');
+}
+async function create(multi){
+ const chosenMode=selectedGameMode(),custom=mode==='playlist',playlist=custom?$('#playlist-url').value.trim():'';
+ if(custom&&!playlist){$('#error').textContent='Paste a playlist link to start.';$('#playlist-url').focus();return}
+ const party_modes=[...document.querySelectorAll('#party-settings input:checked')].map(x=>x.value);
+ if(chosenMode==='party'&&!party_modes.length){$('#error').textContent='Choose at least one Party mode.';return}
+ const generation=++importGeneration;
+ $('#solo').disabled=$('#create').disabled=true;$('#solo').textContent=custom?'Preparing playlist…':'Preparing full mix…';
+ $('#error').textContent=custom?'':'Building a broad mix of artists… Cached mixes start immediately; new mixes load in the background.';
+ try{
+  const payload={mode:chosenMode,party_modes,playlist_url:playlist,multi,name:$('#name').value,genre:$('#genre').value,region:$('#region').value,difficulty:$('#difficulty').value,decade:custom?'All':$('#decade').value,rounds:+$('#rounds').value};
+  const settings=chosenMode==='hits'?{genre:'Mixed',region:'Worldwide',difficulty:'Hits',decade:payload.decade}:{genre:payload.genre,region:payload.region,difficulty:payload.difficulty,decade:payload.decade};
+  $('#playlist-progress').hidden=false;$('#playlist-cancel').hidden=false;$('#playlist-progress-bar').removeAttribute('value');$('#playlist-progress-label').textContent=custom?'Reading playlist…':'Preparing your mix…';$('#playlist-progress-count').textContent='This can take a little while';
+  await waitForPreparation(custom?'playlist':'catalog',custom?{url:playlist}:settings,generation);
+  if(generation!==importGeneration)return;
+  await action('create',payload);
+ }catch(e){if(generation===importGeneration)error(e)}
+ finally{if(generation===importGeneration){$('#playlist-progress').hidden=true;$('#solo').disabled=$('#create').disabled=false;$('#solo').textContent='Start listening ↗'}}
+}
+$('#solo').onclick=()=>create(false);$('#create').onclick=()=>create(true);$('#join').onclick=()=>action('join',{room:$('#code').value.trim().toUpperCase(),name:$('#name').value});function goHome(){if(!$('#playlist-progress').hidden)$('#playlist-cancel').click();$('#race-video video')?.pause();stop();session=null;state=null;last='';searchSeq++;sessionStorage.removeItem('needle');$('#error').textContent='';renderHome()}
 $('#leave').onclick=goHome;$('.brand').onclick=e=>{e.preventDefault();goHome()};
 if(!history.state?.needle){history.replaceState({needle:'home'},'',location.href);history.pushState({needle:'app'},'',location.href)}
 window.addEventListener('popstate',()=>{goHome();history.pushState({needle:'app'},'',location.href)});
@@ -149,7 +184,7 @@ function renderFinal(){
  $('#recap-list').innerHTML=recap.map(item=>{
   const winners=(item.winners||[]).map(w=>esc(w.name)+' · '+Number(w.seconds).toFixed(1)+'s').join(' / ')||'Nobody guessed it';
   const deezer=allowedLink(item.link),spotify=allowedLink(item.spotify_url);
-  const links=(deezer?'<a href="'+deezer+'" target="_blank" rel="noopener">Listen ↗</a>':'')+(spotify?'<a href="'+spotify+'" target="_blank" rel="noopener">Spotify ↗</a>':'');
+  const links=(deezer?'<a href="'+deezer+'" target="_blank" rel="noopener">Deezer ↗</a>':'')+(spotify?'<a href="'+spotify+'" target="_blank" rel="noopener">Spotify ↗</a>':'');
   const label=({guess:'Name the song',choice:'Pick the song',race:'Video race',hits:'Hottest Hits'})[item.mode]||item.mode;
   return '<li><span class="recap-number">'+Number(item.round)+'</span><div><strong>'+esc(item.title)+'</strong><span>'+esc(item.artist)+' · '+esc(label)+'</span><small>'+winners+'</small></div><div class="recap-links">'+links+'</div></li>';
  }).join('');
@@ -165,8 +200,9 @@ let warmTimer,mixConfig;
 const difficultyHelp={Easy:'Recognisable hits only. Europe Easy favours cross-border anthems. Obscure tracks never fill an Easy pool.',Medium:'Known hits plus strong catalogue favourites. Worldwide and Europe Medium include crossover hits.',Hard:'Mid-catalogue singles and fan favourites. No Easy anthems here.',Expert:'Album cuts and deeper catalogue. For collectors.',Impossible:'The deepest end of the available catalogue. Expect obscurity.'};
 function syncMix(){
   if(!mixConfig)return;
+  $('#decade').parentElement.hidden=mode==='playlist';
   ['#genre','#region','#difficulty'].forEach(id=>$(id).parentElement.hidden=(mode==='hits'||mode==='race'||mode==='playlist'));
-  if(mode==='playlist'){$('#mix-help').textContent='Play your playlist with the game type you choose. Decade filtering is optional.';return}
+  if(mode==='playlist'){$('#mix-help').textContent='Play your playlist with the game type you choose.';return}
   if(mode==='hits'){$('#mix-help').textContent='Hottest Hits: all-time singalong favourites, iconic hooks and international anthems. Five snippets, solo or with friends. A stricter song selection than Easy — no deep cuts.';warmCatalog();return}
   if(mode==='race'){$('#mix-help').textContent='Video race: the music video (or audio + artwork) loads completely before guessing, then plays for its full length. Type to guess — fastest correct wins. Correct answers earn 20 to 1 points, spread evenly across the whole song. Skip scores 0.';warmCatalog();return}
  const supported=mixConfig.support[$('#region').value]||{};

@@ -5,7 +5,7 @@ import test_variety as fixtures
 class RevealWinnerTests(fixtures.HTTPGameTests):
  def test_winner_list_all_modes_without_early_leak(self):
   for mode in ('guess','hits','choice','race'):
-   with self.subTest(mode=mode),patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'credit',side_effect=lambda t:t):
+   with self.subTest(mode=mode),patch.object(s,'pool',return_value=fixtures.fixture_tracks()),patch.object(s,'queue_youtube'),patch.object(s,'queue_prefetch'),patch.object(s,'credit',side_effect=lambda t:t):
     host=self.post('create',dict(mode=mode,multi=True,name='Alice'))
     guest=self.post('join',dict(room=host['room'],name='Bob'))
     view=self.post('next',host);self.assertNotIn('correct_players',view)

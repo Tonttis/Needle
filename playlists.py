@@ -1,7 +1,7 @@
 """Import playlist metadata, then resolve tracks to the game's preview provider."""
 import base64,json,os,re,subprocess,threading,time,urllib.parse,urllib.request
 from difflib import SequenceMatcher
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor,as_completed
 from catalog import norm
 from recognition import is_hot_hit
 
@@ -75,8 +75,10 @@ def source_tracks(url):
   offset+=len(items)
  return output,total,provider
 
-def match_playlist(url,fetch,clean):
+def match_playlist(url,fetch,clean,progress=None):
+ if progress:progress('reading',0,None)
  source,total,provider=source_tracks(url)
+ if progress:progress('matching',0,len(source))
  def match(item):
   try:
    query=urllib.parse.quote(item['artist']+' '+item['title'])
@@ -93,7 +95,11 @@ def match_playlist(url,fetch,clean):
    track.update(genre='Playlist',language='Playlist',region='Playlist',country='?',artist_id=str(raw['artist']['id']),rank=raw.get('rank',0),youtube_id=item['video_id'],hot_hit=is_hot_hit(raw['artist']['name'],raw['title']),playlist_track=True)
    return track
   except (KeyError,ValueError):return None
- with ThreadPoolExecutor(max_workers=6) as workers:matched=list(workers.map(match,source))
+ with ThreadPoolExecutor(max_workers=6) as workers:
+  futures=[workers.submit(match,item) for item in source];matched=[]
+  for future in as_completed(futures):
+   matched.append(future.result())
+   if progress:progress('matching',len(matched),len(source))
  tracks=list({t['id']:t for t in matched if t}.values())
  if len(tracks)<4:raise ValueError('Fewer than four playlist songs could be matched to playable previews. Try another playlist.')
  return tracks,dict(provider=provider,total=total,matched=len(tracks),unmatched=total-len(tracks))
