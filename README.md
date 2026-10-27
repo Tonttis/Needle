@@ -62,3 +62,17 @@ python -m unittest -q
 node test_audio_ui.cjs
 node test_mix_ui.cjs
 ```
+
+## V9.0: Party, decades, recap and playlists
+
+Party mode lets the host pick any combination of Name the Song, Pick the Song, Video Race and Hottest Hits. Rounds are randomly shuffled in cycles so selected modes are represented; all scores share one scoreboard. Existing scoring remains: multiplayer snippet/choice hits earn one point, whereas Video Race awards 20–1 based on elapsed time, so video rounds have more impact. Hottest Hits requires at least four matching hit artists in the mix.
+
+Decade filters (1980s–2020s) combine with scene, genre, difficulty and Party selection. They use the album release date reported by the provider; reissues or compilations can have later dates, and tracks without dates are excluded. A cold decade mix may need many provider calls. Work runs in the background and is cached; retry Start when prompted.
+
+The final setlist shows every completed round, song, mode, correct players, elapsed seconds from the start of the round and listening links. A new lobby resets the recap.
+
+Paste a YouTube or Spotify playlist URL in the optional playlist field. Its songs replace scene/genre/familiarity selection, while the decade filter can still apply. Up to 1,000 entries are read and individually matched to Deezer tracks with playable previews. Matching can fail or find a different version; the game displays the matched/total count. A minimum of four playable matches is required. Video Race uses the original YouTube video when available; provider restrictions may prevent playback. Playlist processing is cached for 15 minutes and runs in the background; retry Start if requested.
+
+Spotify requires user authorization: set `SPOTIFY_ACCESS_TOKEN` on the server, or for automatic renewal set `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` and `SPOTIFY_REFRESH_TOKEN` obtained through the Spotify authorization code flow. Do not commit these values. The direct token takes precedence and expires; unset it when using refresh credentials. In Spotify Development Mode, the authorized user must own or collaborate on the playlist, even if it is public. Access outside that scope depends on Spotify's app quota. A Spotify link is metadata only; Spotify audio is not downloaded. See https://developer.spotify.com/documentation/web-api/tutorials/code-flow and https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide.
+
+Deploy the entire package including `playlists.py`, and preserve `.env` and `data/`. Docker Compose passes the Spotify environment variables to the container. Live Spotify, YouTube and Deezer access was not verified from this environment; automated tests use mocked provider responses. Header: V9.0.

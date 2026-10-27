@@ -186,6 +186,7 @@ def artist_key(t):
 
 def choose_song(r):
     playable=[t for t in r['pool'] if 'recognition' not in t or in_difficulty(t,r.get('difficulty','Medium'))]
+    if r.get('mode')=='hits':playable=[t for t in playable if not t.get('playlist_track') or t.get('hot_hit')]
     if not playable:raise ValueError('No tracks meet this difficulty. Choose another mix.')
     # Cross-game variety: avoid repeating the last game's artists/songs when
     # the pool is large enough to allow it. Rooms hand over their tail via
