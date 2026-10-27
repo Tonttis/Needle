@@ -27,13 +27,31 @@ def daily_snapshot(day, tracks):
     candidates=[t for t in tracks if t.get('preview') and ('recognition' not in t or __import__('recognition').in_difficulty(t,'Easy'))]
     if len(candidates)<5:raise ValueError('Not enough songs are available for today’s challenge. Try again later.')
     rng=random.Random(int(hashlib.sha256(('Needle-daily-v1:'+day).encode()).hexdigest(),16))
-    candidates=sorted(candidates,key=lambda t:str(t['id']));rng.shuffle(candidates)
-    chosen=[];artists=set()
-    for t in candidates:
-        artist=(t.get('artist_id') or t.get('artist','')).__str__().casefold()
-        if artist not in artists:chosen.append(t['id']);artists.add(artist)
-        if len(chosen)==5:break
-    if len(chosen)<5:raise ValueError('Not enough different artists for today’s challenge.')
+    # Select uniformly by artist first, so prolific artists do not gain extra
+    # chances simply by having more tracks. Apply Europe Mixed's soft lanes.
+    groups={}
+    for track in sorted(candidates,key=lambda t:str(t['id'])):
+        key=str(track.get('artist_id') or track.get('artist','')).casefold()
+        groups.setdefault(key,[]).append(track)
+    if len(groups)<5:raise ValueError('Not enough different artists for today’s challenge.')
+    chosen=[];language_counts={};country_counts={}
+    while len(chosen)<5:
+        available=sorted(groups)
+        def fits(key):
+            track=groups[key][0];language=track.get('language','');country=track.get('country','')
+            if country=='FI' and country_counts.get('FI',0)>=1:return False
+            if language in ('French','Spanish'):
+                if language_counts.get(language,0)>=1:return False
+                if sum(language_counts.get(x,0) for x in ('French','Spanish'))>=2:return False
+            return True
+        balanced=[key for key in available if fits(key)] or available
+        def weight(key):
+            country=groups[key][0].get('country','')
+            return (1.5 if country in ('FI','SE','NO','DK','IS') else 1)/(1+country_counts.get(country,0)*.35)
+        artist=rng.choices(balanced,weights=[weight(key) for key in balanced],k=1)[0]
+        track=rng.choice(groups.pop(artist));chosen.append(track['id'])
+        language=track.get('language','');country=track.get('country','')
+        language_counts[language]=language_counts.get(language,0)+1;country_counts[country]=country_counts.get(country,0)+1
     with connection() as db:
         db.execute('INSERT OR IGNORE INTO daily_challenges VALUES (?,?,?)',(day,json.dumps(tracks),json.dumps(chosen)))
     return daily_existing(day)
@@ -83,3 +101,11 @@ def record_played(names,song_id,identity=None):
     if not keys or not song_id:return
     with connection() as db:
         db.executemany("INSERT INTO played_songs(profile_key,song_id) VALUES(?,?) ON CONFLICT(profile_key,song_id) DO UPDATE SET plays=plays+1,last_played=CURRENT_TIMESTAMP",[(key,entry) for key in keys for entry in dict.fromkeys([str(song_id)]+([identity] if identity else []))])
+
+
+def clear_played(name):
+    key=profile_key(name)
+    if not key:raise ValueError('Enter a name.')
+    with connection() as db:
+        cursor=db.execute('DELETE FROM played_songs WHERE profile_key=?',(key,))
+        return cursor.rowcount

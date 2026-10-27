@@ -215,7 +215,10 @@ def choose_song(r):
     # create payload from localStorage.
     avoid_artists=set(r.get('previous_artists',[]))
     avoid_songs=set(r.get('previous_songs',[]))
-    candidates=[t for t in playable if t['id'] not in r['used']]
+    used_ids=set(r['used']);used_keys=set()
+    for track in playable:
+        if track['id'] in used_ids:used_keys.update(song_history_keys(track))
+    candidates=[t for t in playable if not (song_history_keys(t)&used_keys)]
     seen=r.get('_played_song_ids',set())
     def preserves_unheard(before,after):
         if not seen:return True
@@ -275,10 +278,15 @@ def choose_song(r):
     return song
 
 def round_choices(song,tracks):
-    lane=[t for t in tracks if t.get('language')==song.get('language') and t['id']!=song['id']]
+    answer_keys=song_history_keys(song)
+    same=[t for t in tracks if t.get('language')==song.get('language') and not (song_history_keys(t)&answer_keys)]
+    # Small custom or decade playlists may not have three same-language
+    # distractors. Fill from the rest rather than failing the whole round.
+    others=[t for t in tracks if t.get('language')!=song.get('language') and not (song_history_keys(t)&answer_keys)]
+    lane=same+others if len(same)<3 else same
     # Prefer genre, nearby popularity and different artists. A sparse genre may
     # use same-language neighbors instead of deleting that country from the pool.
-    lane.sort(key=lambda t:(t.get('genre')!=song.get('genre'),abs(t.get('recognition',0)-song.get('recognition',0)),abs(t.get('rank',0)-song.get('rank',0))))
+    lane.sort(key=lambda t:(t.get('language')!=song.get('language'),t.get('genre')!=song.get('genre'),abs(t.get('recognition',0)-song.get('recognition',0)),abs(t.get('rank',0)-song.get('rank',0))))
     board=random.sample(lane[:80],min(24,len(lane)))+[song]
     random.shuffle(board)
     neighbors=lane[:60]
@@ -293,6 +301,7 @@ def round_choices(song,tracks):
     distractors=[random.choice(other_artists[a]) for a in random.sample(list(other_artists),min(3,len(other_artists)))]
     if len(distractors)<3:
         ids={t['id'] for t in distractors}
-        distractors+=random.sample([t for t in lane if t['id'] not in ids],3-len(distractors))
+        remaining=[t for t in lane if t['id'] not in ids]
+        distractors+=random.sample(remaining,min(len(remaining),3-len(distractors)))
     choices=distractors+[song];random.shuffle(choices)
     return board,choices

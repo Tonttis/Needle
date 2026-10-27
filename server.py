@@ -743,6 +743,21 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get('Content-Length',0))
             if n>4096: raise ValueError('Request too large')
             d=json.loads(self.rfile.read(n)); action=self.path.split('/')[-1]
+            if action=='clear-history':
+                name=str(d.get('name','')).strip()
+                if not name or len(name)>24:raise ValueError('Enter a valid name (up to 24 characters).')
+                # Names have no authentication. This action affects only history,
+                # and the UI explicitly confirms the scope before sending it.
+                with lock:
+                    count=boards.clear_played(name)
+                    for room in rooms.values():
+                        if any(boards.profile_key(p.get('name',''))==boards.profile_key(name) for p in room.get('players',{}).values()):
+                            # Existing games retain their within-game no-repeat
+                            # state. Reset the legacy match tail on rematch.
+                            room['_history_cleared']=True
+                            if room.get('phase')=='lobby':
+                                room['previous_artists']=[];room['previous_songs']=[];room['_next_round']=None
+                return self.reply({'cleared':count})
             if action=='catalog-prepare':
                 genre=d.get('genre','Mixed');region=d.get('region','Worldwide');difficulty=d.get('difficulty','Normal');decade=d.get('decade','All')
                 job=prepare_catalog(genre,region,difficulty,decade)
@@ -783,7 +798,7 @@ class Handler(BaseHTTPRequestHandler):
                     if len(rooms)>100: raise ValueError('Server room limit reached')
                     code=secrets.token_hex(3).upper(); p=secrets.token_urlsafe(24)
                     r={'code':code,'match_id':secrets.token_urlsafe(24),'score_max':0,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits','race','party') else 'guess','game_mode':'party' if d.get('mode')=='party' else d.get('mode','guess'),'party_modes':party_modes,'playlist_report':playlist_report,'playlist_url':playlist_url,'base_difficulty':d.get('difficulty','Normal'),'multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'decade':d.get('decade','All'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[],
-                       'previous_artists':[str(a) for a in d.get('previous_artists',[]) or []][:24],'previous_songs':[str(s) for s in d.get('previous_songs',[]) or []][:40]}
+                       'previous_artists':[],'previous_songs':[]}
                     rooms[code]=r
                     if not r['multi']: advance(r)
                     return self.reply({'room':code,'token':p})
@@ -863,7 +878,7 @@ class Handler(BaseHTTPRequestHandler):
                     # Remember this match's tail so the next match in the same
                     # room (or the same browser's next solo game) avoids
                     # immediate repeats when the pool is large enough.
-                    tail=[t for t in r.get('pool',[]) if t['id'] in r.get('used',[])[-20:]]
+                    tail=[] if r.pop('_history_cleared',False) else [t for t in r.get('pool',[]) if t['id'] in r.get('used',[])[-20:]]
                     r.update(match_id=secrets.token_urlsafe(24),score_max=0,_scores_recorded=False,phase='lobby',mode='party' if r.get('game_mode')=='party' else r['mode'],difficulty=r.get('base_difficulty',r['difficulty']),party_cycle=[],round=0,stage=0,guesses={},history=[],winners=[],
                              recap=[],used=[],deadline=0,guess_times={},race_cooldowns={},race_wrong={},race_started=None,recap_recorded=False,_next_round=None,_current_prefetch=None,previous_artists=[artist_key(t) for t in tail],
                              previous_songs=[t['id'] for t in tail],

@@ -1,5 +1,6 @@
 """Deterministic catalog simulations + real HTTP multiplayer lifecycle checks."""
-import collections,json,random,threading,unittest,urllib.request
+import collections,json,random,threading,unittest,urllib.request,tempfile,pathlib
+import leaderboard as boards
 from unittest.mock import patch
 import catalog as c
 import server as s
@@ -62,6 +63,12 @@ class VarietyTests(unittest.TestCase):
             c.build_pool(fetch,s.clean,'Rock','Finland','Easy')
 
 class HTTPGameTests(unittest.TestCase):
+ def setUp(self):
+    self._score_dir=tempfile.TemporaryDirectory()
+    self._score_patch=patch.object(boards,'DB_PATH',pathlib.Path(self._score_dir.name)/'scores.sqlite3')
+    self._score_patch.start()
+ def tearDown(self):
+    self._score_patch.stop();self._score_dir.cleanup()
  @classmethod
  def setUpClass(cls):
     class Quiet(s.Handler):
