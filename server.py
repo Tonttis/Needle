@@ -210,8 +210,9 @@ def state(r,p):
     if r['phase'] in ['reveal','finished']:
         out['correct']=p in r.get('winners',[])
         out['result']='correct' if out['correct'] else 'incorrect' if r['guesses'].get(p) else 'skipped'
-    if r.get('mode')=='race' and r.get('multi') and r['phase']=='reveal':
-        out['race_winners']=[r['players'][winner]['name'] for winner in r.get('winners',[]) if winner in r['players']]
+    if r.get('multi') and r['phase']=='reveal':
+        out['correct_players']=[r['players'][winner]['name'] for winner in r.get('winners',[]) if winner in r['players']]
+        if r.get('mode')=='race':out['race_winners']=out['correct_players']
     out['host']=p==r['host']; out['submitted']=p in r['guesses']; out['serverTime']=time.time()
     if r['phase']!='lobby': out['audio']='/audio/'+r['audioKey']; out['seconds']=r.get('race_duration',0) if r.get('mode')=='race' else (5 if r['mode']=='choice' else STEPS[r['stage']])
     if r.get('mode')=='race':
