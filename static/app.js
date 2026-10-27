@@ -27,6 +27,19 @@ function renderRevealExtras(answer){
   if(audio){
    try{audio.volume=+($('#volume').value||.7)}catch{}
    audio.src='/spotify-audio/'+(state.audio||'').split('/').pop();
+   // Route the reveal preview through the same analyser used by snippets.
+   // Keep element volume separate from snippet gain, and retain the audio node
+   // until the element is replaced on the next reveal.
+   try{
+    ctx ||= new AudioContext();
+    analyser ||= ctx.createAnalyser();analyser.fftSize=128;
+    const mediaSource=ctx.createMediaElementSource(audio);
+    mediaSource.connect(analyser);analyser.disconnect();analyser.connect(ctx.destination);
+    audio.onplaying=()=>{if($('#spotify-audio')!==audio)return;document.body.classList.add('is-playing');$('#play').textContent='■';window.dispatchEvent(new CustomEvent('needle:audio',{detail:{playing:true,analyser,duration:Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:30}}))};
+    const onStopped=()=>{if($('#spotify-audio')!==audio)return;document.body.classList.remove('is-playing');$('#play').textContent='▶';window.dispatchEvent(new CustomEvent('needle:audio',{detail:{playing:false}}))};
+    audio.onpause=onStopped;audio.onended=onStopped;
+    ctx.resume().catch(()=>{});
+   }catch{}
    audio.play().catch(()=>{});
    audio.onerror=()=>{try{$('#play').click()}catch(e){error(e)}};
   }else if(!answer.preview_pending){
@@ -84,7 +97,7 @@ $('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.o
 $('#next').onclick=()=>action('next');$('#return-lobby').onclick=()=>action('lobby');$('#finish-home').onclick=goHome;$('#skip').onclick=()=>guess('');async function guess(id){if(submitting||!state||state.submitted||state.phase!=='playing'||(state.mode==='race'&&state.serverTime<(state.race_cooldown_until||0)))return;submitting=true;try{ctx ||= new AudioContext();await ctx.resume()}catch{}stop();document.querySelectorAll('#choices button,#results button,#skip').forEach(b=>b.disabled=true);await action('guess',{id,round:state.round,stage:state.stage});if(state?.mode==='race'&&state?.phase==='playing'){searchSeq++;$('#search').value='';$('#results').innerHTML='';}submitting=false;if(state?.phase==='playing'&&!state.submitted)document.querySelectorAll('#choices button,#results button,#skip').forEach(b=>b.disabled=false)}
 function stop(){try{const sa=document.querySelector('#spotify-audio');if(sa){sa.pause()}}catch{}playGeneration++;document.body.classList.remove('is-playing');window.dispatchEvent(new CustomEvent('needle:audio',{detail:{playing:false}}));if(source){const old=source;source=null;old.onended=null;try{old.stop()}catch{}}$('#play').textContent='▶'}
 $('#play').onclick=async()=>{
- if(source||$('#play').textContent==='…'){stop();return}
+ if(source||$('#play').textContent==='…'||($('#spotify-audio')&&$('#spotify-audio').paused===false)){stop();return}
  const generation=++playGeneration, current=state; if(!current)return;
  try{
  ctx ||= new AudioContext();await ctx.resume();$('#error').textContent='';$('#play').textContent='…';

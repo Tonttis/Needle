@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const code=fs.readFileSync('static/app.js','utf8');
+const block=code.slice(code.indexOf('function renderRevealExtras(answer){'),code.indexOf('function selectedGameMode()'));
+let audio,events=[],playing=false,connections=0;
+const box={set innerHTML(html){audio=html.includes('<audio')?{paused:true,volume:0,duration:20,play(){this.paused=false;this.onplaying?.();return Promise.resolve()},pause(){this.paused=true;this.onpause?.()}}:null}};
+const play={textContent:'▶'},volume={value:'.7'};
+const analyser={fftSize:0,connect(){connections++},disconnect(){}};
+const scope={state:{audio:'/audio/123',correct:true},ctx:null,analyser:null,stop(){},error(e){throw e},esc:s=>s,queueMicrotask,document:{body:{classList:{add(){playing=true},remove(){playing=false}}}},window:{dispatchEvent(e){events.push(e.detail)}},CustomEvent:function(name,init){this.detail=init.detail},AudioContext:function(){return {destination:{},createAnalyser(){return analyser},createMediaElementSource(){return {connect(a){assert.equal(a,analyser);connections++}}},resume(){return Promise.resolve()}}},$:s=>({'#reveal-extras':box,'#spotify-audio':audio,'#volume':volume,'#play':play}[s])};
+vm.createContext(scope);vm.runInContext(block,scope);scope.renderRevealExtras({spotify_preview:'yes'});
+assert.equal(connections,2);assert.equal(audio.volume,.7);assert.equal(playing,true);assert.equal(events.at(-1).analyser,analyser);assert.equal(events.at(-1).duration,20);assert.equal(play.textContent,'■');audio.pause();assert.equal(playing,false);assert.equal(events.at(-1).playing,false);assert.equal(play.textContent,'▶');console.log('Reveal preview: analyser connection, playback events, volume and stop passed');
