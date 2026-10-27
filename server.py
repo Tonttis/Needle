@@ -338,8 +338,8 @@ def resolve_youtube(artist,title):
     try:
         for suffix in [' official video',' official audio']:
             try:
-                proc=subprocess.run(['yt-dlp','--no-playlist','--print','id','--print','title','--no-warnings','ytsearch1:'+q+suffix],
-                    capture_output=True,text=True,timeout=20,stdout=subprocess.DEVNULL if False else subprocess.PIPE,stderr=subprocess.DEVNULL)
+                proc=subprocess.run(['yt-dlp','--js-runtimes','node','--no-playlist','--print','id','--print','title','--no-warnings','ytsearch1:'+q+suffix],
+                    capture_output=True,text=True,timeout=35)
                 # yt-dlp prints id then title on separate lines; take first pair.
                 lines=[l.strip() for l in (proc.stdout or '').splitlines() if l.strip()]
                 if len(lines)>=1 and len(lines[0])==11:

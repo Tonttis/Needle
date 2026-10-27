@@ -12,7 +12,7 @@ def prepare(data,video_id,audio_only=False):
      with tempfile.TemporaryDirectory(dir=folder) as temp:
       output=pathlib.Path(temp)/('media'+target.suffix)
       fmt='bestaudio[ext=m4a]/bestaudio' if audio_only else 'bestvideo[height<=480][vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]'
-      subprocess.run(['yt-dlp','--no-playlist','--max-filesize','80M','-f',fmt,'--merge-output-format','mp4','-o',str(output),'https://www.youtube.com/watch?v='+video_id],check=True,timeout=150,capture_output=True)
+      subprocess.run(['yt-dlp','--js-runtimes','node','--no-playlist','--max-filesize','80M','-f',fmt,'--merge-output-format','mp4','-o',str(output),'https://www.youtube.com/watch?v='+video_id],check=True,timeout=150,capture_output=True)
       if not output.exists() or output.stat().st_size>80*1024*1024:raise ValueError('Media unavailable')
       output.replace(target)
     info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_format','-show_streams','-of','json',str(target)],timeout=15))
