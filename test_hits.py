@@ -26,17 +26,17 @@ class HitsSelectionTests(unittest.TestCase):
 
  def test_race_points_and_first_wins(self):
   from server import race_points, settle_race
-  self.assertEqual([race_points(x) for x in [1,5,10,20,28,31]],[5,4,3,2,1,1])
+  self.assertEqual([race_points(x,100) for x in [0,4.9,5,50,95,99.9,100]],[20,20,19,10,1,1,0])
   room=dict(pool=[],used=[],difficulty='Medium',rounds=3,region='Worldwide',mode='race',multi=False,
             players={'a':{'name':'A','score':0}},song={'id':'s1','artist_id':'x'},race_started=1000.0,deadline=1030.0,guesses={'a':'s1'},guess_times={'a':2.0})
   import server as s
   s.settle_race(room)
-  self.assertEqual(room['phase'],'reveal');self.assertEqual(room['players']['a']['score'],5)
+  self.assertEqual(room['phase'],'reveal');self.assertEqual(room['players']['a']['score'],19)
   room=dict(pool=[],used=[],difficulty='Medium',rounds=3,region='Worldwide',mode='race',multi=True,
             players={'a':{'name':'A','score':0},'b':{'name':'B','score':0}},song={'id':'s1','artist_id':'x'},race_started=1000.0,deadline=1030.0,
             guesses={'a':'s1','b':'s1'},guess_times={'a':9.0,'b':2.0})
   s.settle_race(room)
-  self.assertEqual(room['winners'],['b']);self.assertEqual(room['players']['b']['score'],5);self.assertEqual(room['players']['a']['score'],0)
+  self.assertEqual(room['winners'],['b']);self.assertEqual(room['players']['b']['score'],19);self.assertEqual(room['players']['a']['score'],0)
 
 class HitsHTTPTests(fixtures.HTTPGameTests):
  def test_hits_preset_search_scoring_and_online(self):

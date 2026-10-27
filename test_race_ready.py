@@ -11,8 +11,8 @@ class RaceReadyTests(unittest.TestCase):
   r=self.room();r.update(race_started=time.time()-240,deadline=time.time()-1)
   s.settle_race(r);self.assertEqual(r['phase'],'reveal')
  def test_correct_after_thirty_seconds_still_scores(self):
-  r=self.room();r.update(race_started=time.time()-100,deadline=time.time()+100,guesses={'a':'1'},guess_times={'a':100})
-  s.settle_race(r);self.assertEqual(r['players']['a']['score'],1)
+  r=self.room();r.update(race_started=time.time()-100,deadline=time.time()+100,race_duration=200,guesses={'a':'1'},guess_times={'a':100})
+  s.settle_race(r);self.assertEqual(r['players']['a']['score'],10)
 
 from unittest.mock import patch
 import test_variety as fixtures

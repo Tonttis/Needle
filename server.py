@@ -1,3 +1,4 @@
+import math
 from race_media import prepare as prepare_race_media, start_janitor
 from audio_cache import AudioCache
 from recognition import VERSION as CATALOG_VERSION, in_difficulty
@@ -114,10 +115,12 @@ def prepare_catalog(genre,region,difficulty):
 def pool(genre,region='Worldwide',difficulty='Normal'):
     try:return copy.deepcopy(prepare_catalog(genre,region,difficulty).result(timeout=20))
     except TimeoutError:raise ValueError('This new mix is still loading in the background. Try Start again shortly; the work is being reused.')
-def race_points(elapsed):
-    try:elapsed=float(elapsed)
+def race_points(elapsed,duration):
+    """Twenty equal intervals over the track: 20 at the start, 1 at the end."""
+    try:elapsed=float(elapsed);duration=float(duration)
     except (TypeError,ValueError):return 0
-    return 5 if elapsed<=3 else 4 if elapsed<=8 else 3 if elapsed<=15 else 2 if elapsed<=25 else 1
+    if not math.isfinite(elapsed) or not math.isfinite(duration) or duration<=0 or elapsed>=duration:return 0
+    return max(1,20-math.floor(20*max(0,elapsed)/duration))
 
 RACE_FORMAT='bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best'
 RACE_MAX_BYTES=80*1024*1024
@@ -167,6 +170,7 @@ def settle_race(r):
     now=time.time()
     started=r['race_started']
     def elapsed(p):return r.get('guess_times',{}).get(p,now-started)
+    duration=r.get('race_duration') or r['deadline']-started
     correct=[p for p,g in r['guesses'].items() if g==r['song']['id']]
     total=len(r.get('players',{}))
     answered=len(r.get('guesses',{}))
@@ -176,7 +180,7 @@ def settle_race(r):
             first=min(correct,key=lambda p:elapsed(p))
             # 250ms tie window: near-simultaneous correct both score.
             winners=[p for p in correct if abs(elapsed(p)-elapsed(first))<=0.25]
-            pts=race_points(elapsed(first))
+            pts=race_points(elapsed(first),duration)
             for p in winners:r['players'][p]['score']+=pts
             r['phase']='reveal'; r['winners']=winners
             if r.get('history'):r['history'][-1].update(stage=0,correct=len(winners),race_points=pts,race_elapsed=round(elapsed(first),2))
@@ -189,7 +193,7 @@ def settle_race(r):
     # solo
     if correct or timeout or answered>=1:
         p=correct[0] if correct else None
-        pts=race_points(elapsed(p)) if p else 0
+        pts=race_points(elapsed(p),duration) if p else 0
         if p:r['players'][p]['score']+=pts
         r['phase']='reveal'; r['winners']=correct[:1]
         if r.get('history'):r['history'][-1].update(stage=0,correct=len(correct),race_points=pts,race_elapsed=round(elapsed(p) if p else now-started,2))

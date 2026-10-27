@@ -107,7 +107,7 @@ function renderRaceVideo(){
  }
  if(state.race_started&&raceObjectURL){const delay=state.race_started-state.serverTime;
   if(delay>0)message.textContent='Everyone ready. Starting…';
-  else {message.textContent=Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds remaining';if(v.paused){v.currentTime=Math.min(state.elapsed||0,v.duration||0);v.play().catch(()=>{box.querySelector('.race-start').hidden=false;message.textContent='Press Start playback to resume sound.'})}}
+  else {const points=Math.max(1,20-Math.floor(20*Math.max(0,state.elapsed||0)/state.race_duration));message.textContent=Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds remaining · '+points+' points available';if(v.paused){v.currentTime=Math.min(state.elapsed||0,v.duration||0);v.play().catch(()=>{box.querySelector('.race-start').hidden=false;message.textContent='Press Start playback to resume sound.'})}}
  }
 }
 const inviteCode=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();
@@ -155,7 +155,7 @@ function syncMix(){
   if(!mixConfig)return;
   ['#genre','#region','#difficulty'].forEach(id=>$(id).parentElement.hidden=(mode==='hits'||mode==='race'));
   if(mode==='hits'){$('#mix-help').textContent='Hottest Hits: all-time singalong favourites, iconic hooks and international anthems. Five snippets, solo or with friends. A stricter song selection than Easy — no deep cuts.';warmCatalog();return}
-  if(mode==='race'){$('#mix-help').textContent='Video race: the music video (or audio + artwork) loads completely before guessing, then plays for its full length. Type to guess — fastest correct wins. Skip scores 0. Solo: faster = more points.';warmCatalog();return}
+  if(mode==='race'){$('#mix-help').textContent='Video race: the music video (or audio + artwork) loads completely before guessing, then plays for its full length. Type to guess — fastest correct wins. Correct answers earn 20 to 1 points, spread evenly across the whole song. Skip scores 0.';warmCatalog();return}
  const supported=mixConfig.support[$('#region').value]||{};
  const previousGenre=$('#genre').value,previousDifficulty=$('#difficulty').value;
  $('#genre').innerHTML=mixConfig.genres.map(g=>'<option'+(!supported[g]?' disabled':'')+'>'+esc(g)+'</option>').join('');
