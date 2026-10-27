@@ -13,10 +13,11 @@ class CatalogTests(unittest.TestCase):
  def test_filters_intersect(self):
   seeds=c.eligible('Rock','Finland');self.assertTrue(seeds)
   self.assertTrue(all(s['region']=='Finland' and s['genre']=='Rock' for s in seeds))
-  self.assertTrue(all(s['region'] in ['Finland','Europe'] for s in c.eligible('Mixed','Europe')))
+  self.assertIn('Drake',{s['name'] for s in c.eligible('Mixed','Europe')})
  def test_difficulty(self):
-  rows=self.rows();easy=c.band(rows,'Easy');hard=c.band(rows,'Hard')
-  self.assertEqual(len(easy),5);self.assertGreater(min(t['rank'] for t in easy),max(t['rank'] for t in hard))
+  rows=[dict(recognition=x) for x in [94,78,65,48,32,16]]
+  self.assertEqual([t['recognition'] for t in c.band(rows,'Easy')],[94])
+  self.assertEqual([t['recognition'] for t in c.band(rows,'Hard')],[78,65,48])
  def test_normalization(self):
   self.assertEqual(c.norm('KÄÄRIJÄ'),c.norm('kaarija'))
   self.assertEqual(c.title_key(dict(title='Song (2011 Remastered)',artist='Queen')),c.title_key(dict(title='Song',artist='Queen')))
@@ -29,6 +30,6 @@ class CatalogTests(unittest.TestCase):
    aid=int(path.split('/')[1]);return {'data':[dict(id=aid*100+i,title='Song '+str(i),artist={'id':aid,'name':'Artist '+str(aid)},preview='https://example.test',rank=100-i) for i in range(50)]}
   def clean(t):return dict(id=str(t['id']),title=t['title'],artist=t['artist']['name'])
   with patch.object(c,'SEEDS',seeds):
-   rows=c.build_pool(fetch,clean,'Rock','Finland','Easy');self.assertEqual(len(rows),40)
+   rows=c.build_pool(fetch,clean,'Rock','Finland','Hard');self.assertEqual(len(rows),400)
    self.assertTrue(all(t['language']=='Finnish' for t in rows))
 if __name__=='__main__':unittest.main()

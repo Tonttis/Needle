@@ -1,0 +1,389 @@
+# country|language|genres (; separated)|artist|reach (global/europe/local)|recognisable titles (; separated)|evidence key (editorial = judgement, not measured chart rank)
+GB|English|Pop|Adele|global|Rolling in the Deep;Someone Like You;Hello;Set Fire to the Rain;Easy On Me|editorial
+GB|English|Pop|Ed Sheeran|global|Shape of You;Perfect;Thinking Out Loud;Bad Habits|uk-streams
+GB|English|Pop|Dua Lipa|global|New Rules;Don't Start Now;Levitating;Houdini;Training Season|editorial
+GB|English|Pop|Harry Styles|global|As It Was;Watermelon Sugar;Sign of the Times|editorial
+GB|English|Pop|Elton John|global|Your Song;Rocket Man;I'm Still Standing|editorial
+GB|English|Pop|George Michael|global|Careless Whisper;Faith|editorial
+GB|English|Pop|Robbie Williams|europe|Angels;Feel;Rock DJ|editorial
+GB|English|Pop|Spice Girls|global|Wannabe;Spice Up Your Life|editorial
+GB|English|Pop|Rick Astley|global|Never Gonna Give You Up;Together Forever|editorial
+GB|English|Pop|Lewis Capaldi|global|Someone You Loved;Before You Go|uk-streams
+GB|English|Pop|George Ezra|europe|Shotgun;Budapest|uk-streams
+GB|English|Pop|James Blunt|europe|You're Beautiful;Goodbye My Lover|editorial
+GB|English|Pop|Sam Smith|global|Stay With Me;Too Good At Goodbyes;Unholy|editorial
+GB|English|Pop|Ellie Goulding|global|Love Me Like You Do;Burn|editorial
+GB|English|Pop|Sophie Ellis-Bextor|europe|Murder on the Dancefloor|dance
+GB|English|Rock|Queen|global|Bohemian Rhapsody;Don't Stop Me Now;We Will Rock You;We Are the Champions;Another One Bites the Dust;I Want to Break Free|queen
+GB|English|Rock|Coldplay|global|Viva La Vida;Yellow;The Scientist;Fix You;Paradise;A Sky Full of Stars|editorial
+GB|English|Rock|The Beatles|global|Hey Jude;Let It Be;Yesterday;Come Together;Here Comes the Sun|editorial
+GB|English|Rock;Indie / Alternative|Oasis|global|Wonderwall;Don't Look Back in Anger|uk-streams
+GB|English|Rock;Indie / Alternative|Arctic Monkeys|global|Do I Wanna Know?;I Wanna Be Yours|editorial
+GB|English|Rock;Indie / Alternative|Radiohead|global|Creep;No Surprises|editorial
+GB|English|Rock|The Rolling Stones|global|Paint It, Black;(I Can't Get No) Satisfaction;Angie|editorial
+GB|English|Rock|Dire Straits|europe|Sultans of Swing;Money for Nothing;Walk of Life|editorial
+GB|English|Rock|Pink Floyd|global|Another Brick in the Wall, Pt. 2;Wish You Were Here;Comfortably Numb|editorial
+GB|English|Rock|Deep Purple|global|Smoke on the Water;Highway Star|editorial
+GB|English|Rock|Led Zeppelin|global|Stairway to Heaven;Whole Lotta Love|editorial
+GB|English|Rock;Indie / Alternative|Blur|europe|Song 2;Girls & Boys|editorial
+GB|English|Rock;Indie / Alternative|Muse|europe|Uprising;Supermassive Black Hole;Starlight|editorial
+GB|English|Rock|The Police|global|Every Breath You Take;Roxanne;Message in a Bottle|editorial
+GB|English|Metal|Black Sabbath|global|Paranoid;Iron Man;War Pigs|editorial
+GB|English|Metal|Iron Maiden|global|The Trooper;Run to the Hills;Fear of the Dark|editorial
+GB|English|Metal|Judas Priest|global|Breaking the Law;Painkiller|editorial
+GB|English|Metal|Motörhead|global|Ace of Spades|editorial
+GB|English|Metal|Bring Me The Horizon|europe|Can You Feel My Heart;Throne|editorial
+GB|English|Dance|Calvin Harris|global|Summer;Feel So Close;One Kiss;This Is What You Came For|dance
+GB|English|Dance|Clean Bandit|global|Rather Be;Rockabye;Symphony|dance
+GB|English|Dance|Faithless|europe|Insomnia;God Is a DJ|editorial
+GB|English|Dance|Disclosure|europe|Latch;You & Me|dance
+GB|English|Dance|Rudimental|europe|Feel the Love;Waiting All Night;These Days|dance-download
+GB|English|Electronic|The Prodigy|europe|Firestarter;Breathe;Smack My Bitch Up|editorial
+GB|English|Electronic|The Chemical Brothers|europe|Hey Boy Hey Girl;Galvanize|editorial
+GB|English|Electronic|Depeche Mode|global|Enjoy the Silence;Personal Jesus;Just Can't Get Enough|editorial
+GB|English|Electronic;Indie / Alternative|Gorillaz|global|Feel Good Inc.;Clint Eastwood;On Melancholy Hill|editorial
+GB|English|Electronic|Eurythmics|global|Sweet Dreams (Are Made of This);Here Comes the Rain Again|editorial
+GB|English|Electronic|Pet Shop Boys|europe|West End Girls;It's a Sin;Always on My Mind|editorial
+GB|English|R&B;Soul / Funk|Amy Winehouse|global|Rehab;Back to Black;You Know I'm No Good|editorial
+GB|English|R&B;Soul / Funk|Sade|global|Smooth Operator;The Sweetest Taboo|editorial
+GB|English|Rap / Hip Hop|Stormzy|europe|Vossi Bop;Own It|uk-streams
+GB|English|Rap / Hip Hop|Central Cee|europe|Doja;Sprinter|editorial
+GB|English|Indie / Alternative|Glass Animals|global|Heat Waves|editorial
+GB|English|Punk / Pop Punk|The Clash|global|Should I Stay or Should I Go;London Calling;Rock the Casbah|editorial
+GB|English|Punk / Pop Punk|Sex Pistols|global|Anarchy in the U.K.;God Save the Queen|editorial
+GB|English|Reggae|UB40|global|Red Red Wine;Kingston Town|editorial
+US|English|Pop|Taylor Swift|global|Shake It Off;Blank Space;Love Story;Cruel Summer;Anti-Hero|editorial
+US|English|Pop|Lady Gaga|global|Poker Face;Bad Romance;Just Dance;Shallow;Die With A Smile|editorial
+US|English|Pop|Michael Jackson|global|Billie Jean;Beat It;Thriller;Smooth Criminal;Black or White|editorial
+US|English|Pop|Madonna|global|Like a Prayer;Like a Virgin;Hung Up;La Isla Bonita|editorial
+US|English|Pop|Bruno Mars|global|Just the Way You Are;Locked out of Heaven;Grenade;24K Magic|editorial
+US|English|Pop|Billie Eilish|global|bad guy;BIRDS OF A FEATHER;lovely;What Was I Made For?|editorial
+US|English|Pop|Katy Perry|global|Firework;Roar;I Kissed a Girl;Dark Horse;Hot N Cold|editorial
+US|English|Pop|Britney Spears|global|Toxic;...Baby One More Time;Oops!...I Did It Again|editorial
+US|English|Pop|Miley Cyrus|global|Flowers;Wrecking Ball;Party In The U.S.A.|editorial
+US|English|Pop|Ariana Grande|global|7 rings;thank u, next;we can't be friends (wait for your love)|editorial
+US|English|Pop|Sabrina Carpenter|global|Espresso;Please Please Please;Taste|ifpi24
+US|English|Pop|Benson Boone|global|Beautiful Things|ifpi24
+US|English|Pop|Alex Warren|global|Ordinary|ifpi25
+US|English|Pop|Olivia Rodrigo|global|drivers license;good 4 u;vampire|editorial
+US|English|Pop|Chappell Roan|global|Good Luck, Babe!;Pink Pony Club|ifpi25
+US|English|Pop|Backstreet Boys|global|I Want It That Way;Everybody (Backstreet's Back);As Long as You Love Me|editorial
+US|English|Pop|Maroon 5|global|Sugar;Moves Like Jagger;This Love;Girls Like You;Memories|editorial
+US|English|Pop|OneRepublic|global|Counting Stars;Apologize;I Ain't Worried|editorial
+US|English|Rock|Nirvana|global|Smells Like Teen Spirit;Come As You Are;Lithium|editorial
+US|English|Rock|Red Hot Chili Peppers|global|Californication;Under the Bridge;Otherside;Can't Stop;Snow (Hey Oh)|editorial
+US|English|Rock|Linkin Park|global|In the End;Numb;What I've Done;Faint|editorial
+US|English|Rock;Punk / Pop Punk|Green Day|global|Boulevard of Broken Dreams;American Idiot;Basket Case;Wake Me up When September Ends|editorial
+US|English|Rock|Bon Jovi|global|Livin' On A Prayer;It's My Life;You Give Love A Bad Name|editorial
+US|English|Rock|Guns N' Roses|global|Sweet Child O' Mine;Welcome To The Jungle;November Rain;Paradise City|editorial
+US|English|Rock|Eagles|global|Hotel California;Take It Easy|editorial
+US|English|Rock|Imagine Dragons|global|Believer;Radioactive;Thunder;Demons|editorial
+US|English|Rock;Indie / Alternative|The Killers|global|Mr. Brightside;Somebody Told Me;Human|editorial
+US|English|Rock|Toto|global|Africa;Hold the Line;Rosanna|editorial
+US|English|Rock|Journey|global|Don't Stop Believin';Separate Ways (Worlds Apart)|editorial
+US|English|Rock|Foo Fighters|global|Everlong;The Pretender;Learn to Fly|editorial
+US|English|Rock|R.E.M.|global|Losing My Religion;Everybody Hurts|editorial
+US|English|Rock|Creedence Clearwater Revival|global|Have You Ever Seen The Rain;Fortunate Son;Bad Moon Rising|editorial
+US|English|Metal|Metallica|global|Nothing Else Matters;Enter Sandman;Master Of Puppets;The Unforgiven|editorial
+US|English|Metal|System Of A Down|global|Chop Suey!;Toxicity;B.Y.O.B.|editorial
+US|English|Metal|Slipknot|global|Duality;Psychosocial;Before I Forget|editorial
+US|English|Metal|Disturbed|global|Down with the Sickness;The Sound of Silence|editorial
+US|English|Metal|Evanescence|global|Bring Me To Life;My Immortal|editorial
+US|English|Metal|Rage Against The Machine|global|Killing In the Name;Bulls On Parade|editorial
+US|English|Metal|Limp Bizkit|global|Rollin' (Air Raid Vehicle);Behind Blue Eyes;Break Stuff|editorial
+US|English|Rap / Hip Hop|Eminem|global|Lose Yourself;Without Me;The Real Slim Shady;Love The Way You Lie;Stan|editorial
+US|English|Rap / Hip Hop|50 Cent|global|In Da Club;Candy Shop;P.I.M.P.|editorial
+US|English|Rap / Hip Hop|Snoop Dogg|global|Drop It Like It's Hot;Beautiful|editorial
+US|English|Rap / Hip Hop|Dr. Dre|global|Still D.R.E.;The Next Episode|editorial
+US|English|Rap / Hip Hop|Kanye West|global|Stronger;Gold Digger;Heartless|editorial
+US|English|Rap / Hip Hop|Travis Scott|global|goosebumps;SICKO MODE;HIGHEST IN THE ROOM|editorial
+US|English|Rap / Hip Hop|Kendrick Lamar|global|HUMBLE.;Not Like Us;luther|editorial
+US|English|Rap / Hip Hop|Outkast|global|Hey Ya!;Ms. Jackson|editorial
+US|English|Rap / Hip Hop|Post Malone|global|Circles;Sunflower;rockstar|editorial
+US|English|Rap / Hip Hop|Coolio|global|Gangsta's Paradise|editorial
+US|English|Rap / Hip Hop|Nelly|global|Hot In Herre;Dilemma|editorial
+US|English|R&B|Beyoncé|global|Crazy In Love;Halo;Single Ladies (Put a Ring on It)|editorial
+US|English|R&B|Usher|global|Yeah!;U Remind Me|editorial
+US|English|R&B|Alicia Keys|global|Fallin';No One;Girl on Fire|editorial
+US|English|R&B|Whitney Houston|global|I Will Always Love You;I Wanna Dance with Somebody (Who Loves Me)|editorial
+US|English|R&B|TLC|global|No Scrubs;Waterfalls|editorial
+US|English|R&B|SZA|global|Kill Bill;Snooze|editorial
+US|English|R&B;Soul / Funk|Teddy Swims|global|Lose Control|ifpi24
+US|English|Soul / Funk|Stevie Wonder|global|Superstition;I Just Called To Say I Love You;Isn't She Lovely|editorial
+US|English|Soul / Funk|Marvin Gaye|global|Sexual Healing;What's Going On;I Heard It Through The Grapevine|editorial
+US|English|Soul / Funk|Aretha Franklin|global|Respect;(You Make Me Feel Like) A Natural Woman|editorial
+US|English|Soul / Funk|Earth, Wind & Fire|global|September;Let's Groove;Boogie Wonderland|editorial
+US|English|Soul / Funk|James Brown|global|I Got You (I Feel Good);Get Up (I Feel Like Being A) Sex Machine|editorial
+US|English|Soul / Funk|Bill Withers|global|Ain't No Sunshine;Lean on Me;Lovely Day|editorial
+US|English|Soul / Funk|Ben E. King|global|Stand by Me|editorial
+US|English|Soul / Funk|Otis Redding|global|(Sittin' On) the Dock of the Bay|editorial
+US|English|Country|Johnny Cash|global|Ring of Fire;I Walk the Line;Hurt|editorial
+US|English|Country|Dolly Parton|global|Jolene;9 to 5|editorial
+US|English|Country|John Denver|global|Take Me Home, Country Roads;Leaving on a Jet Plane|editorial
+US|English|Country|Kenny Rogers|global|The Gambler;Islands in the Stream|editorial
+US|English|Country|Chris Stapleton|global|Tennessee Whiskey|aria24
+US|English|Country|Shaboozey|global|A Bar Song (Tipsy)|ifpi24
+US|English|Country|Dasha|global|Austin (Boots Stop Workin')|editorial
+US|English|Country|Luke Combs|global|Fast Car;Beautiful Crazy|aria24
+US|English|Country|Zach Bryan|local|I Remember Everything;Something in the Orange|editorial
+US|English|Country|Morgan Wallen|local|Last Night;Whiskey Glasses|editorial
+US|English|Country|Willie Nelson|global|On the Road Again;Always On My Mind|editorial
+US|English|Jazz|Louis Armstrong|global|What A Wonderful World;La Vie En Rose|editorial
+US|English|Jazz|Frank Sinatra|global|My Way;Fly Me To The Moon;New York, New York|editorial
+US|English|Jazz|Nina Simone|global|Feeling Good;My Baby Just Cares for Me;I Put A Spell On You|editorial
+US|English|Jazz|Ella Fitzgerald|global|Dream A Little Dream Of Me;Summertime|editorial
+US|Instrumental|Jazz|The Dave Brubeck Quartet|global|Take Five;Blue Rondo a la Turk|editorial
+US|Instrumental|Jazz|Miles Davis|global|So What;Freddie Freeloader|editorial
+US|English|Jazz|Norah Jones|global|Don't Know Why;Come Away With Me|editorial
+US|Instrumental|Jazz|Glenn Miller|global|In the Mood;Moonlight Serenade|editorial
+US|English|Blues|B.B. King|global|The Thrill Is Gone|editorial
+US|English|Blues|Muddy Waters|global|Mannish Boy;Hoochie Coochie Man|editorial
+US|English|Blues|Howlin' Wolf|global|Smokestack Lightnin';Spoonful|editorial
+US|English|Blues|John Lee Hooker|global|Boom Boom;One Bourbon, One Scotch, One Beer|editorial
+US|English|Blues|Etta James|global|At Last;I'd Rather Go Blind|editorial
+US|English|Blues|Stevie Ray Vaughan|global|Pride and Joy;Texas Flood|editorial
+US|English|Punk / Pop Punk|blink-182|global|All The Small Things;What's My Age Again?;I Miss You|editorial
+US|English|Punk / Pop Punk|The Offspring|global|Pretty Fly (For A White Guy);Self Esteem;The Kids Aren't Alright|editorial
+US|English|Punk / Pop Punk|Ramones|global|Blitzkrieg Bop;I Wanna Be Sedated|editorial
+US|English|Punk / Pop Punk|My Chemical Romance|global|Welcome to the Black Parade;Teenagers|editorial
+US|English|Punk / Pop Punk|Paramore|global|Misery Business;Still into You|editorial
+US|English|Indie / Alternative|The White Stripes|global|Seven Nation Army;Fell In Love With a Girl|editorial
+US|English|Indie / Alternative|The Neighbourhood|global|Sweater Weather|spotify20
+US|English|Indie / Alternative|MGMT|global|Kids;Electric Feel|editorial
+US|English|Indie / Alternative|Foster The People|global|Pumped Up Kicks|editorial
+US|English|Indie / Alternative|Lana Del Rey|global|Summertime Sadness;Video Games;Born To Die|editorial
+US|English|Dance|The Chainsmokers|global|Closer;Don't Let Me Down;Something Just Like This|editorial
+US|English|Dance|LMFAO|global|Party Rock Anthem;Sexy And I Know It|dance-download
+CA|English|Pop;R&B|The Weeknd|global|Blinding Lights;Starboy;Save Your Tears;Can't Feel My Face;The Hills|spotify20
+CA|English|Rap / Hip Hop|Drake|global|One Dance;God's Plan;Hotline Bling;Passionfruit|editorial
+CA|English|Pop|Justin Bieber|global|Sorry;Love Yourself;Baby;What Do You Mean?|editorial
+CA|English|Pop|Carly Rae Jepsen|global|Call Me Maybe|editorial
+CA|English|Pop|Shawn Mendes|global|Stitches;Treat You Better;There's Nothing Holdin' Me Back|editorial
+CA|English|Pop|Tate McRae|global|greedy;you broke me first|editorial
+CA|English|Country|Shania Twain|global|Man! I Feel Like A Woman!;That Don't Impress Me Much;You're Still The One|editorial
+CA|English|Rock|Nickelback|global|How You Remind Me;Rockstar|editorial
+CA|English|Rock|Bryan Adams|global|Summer Of '69;(Everything I Do) I Do It For You;Heaven|editorial
+CA|English|Punk / Pop Punk|Avril Lavigne|global|Complicated;Sk8er Boi;Girlfriend|editorial
+CA|English|Punk / Pop Punk|Sum 41|global|In Too Deep;Fat Lip|editorial
+CA|English|Jazz|Michael Bublé|global|Feeling Good;Haven't Met You Yet;Home|editorial
+BB|English|Pop;R&B|Rihanna|global|Umbrella;Diamonds;We Found Love;Only Girl (In The World);Don't Stop The Music|editorial
+IE|English|Rock|U2|global|With Or Without You;One;Beautiful Day;Sunday Bloody Sunday|editorial
+IE|English|Rock|The Cranberries|global|Zombie;Linger;Dreams|editorial
+IE|English|Rock;Indie / Alternative|Hozier|global|Take Me to Church;Too Sweet|editorial
+IE|English|Pop|Enya|europe|Orinoco Flow;Only Time|editorial
+IE|English|Pop|Westlife|europe|My Love;You Raise Me Up;Uptown Girl|editorial
+SE|English|Pop|ABBA|global|Dancing Queen;Mamma Mia;Gimme! Gimme! Gimme! (A Man After Midnight);The Winner Takes It All;Waterloo|editorial
+SE|English|Pop|Roxette|europe|It Must Have Been Love;Listen To Your Heart;The Look|editorial
+SE|English|Pop|Ace of Base|global|All That She Wants;The Sign;Beautiful Life|editorial
+SE|English|Pop|Zara Larsson|europe|Lush Life;Never Forget You|editorial
+SE|English|Pop|Robyn|europe|Dancing On My Own;Call Your Girlfriend|editorial
+SE|English|Pop|Tove Lo|europe|Habits (Stay High);Talking Body|editorial
+SE|English|Dance|Avicii|global|Wake Me Up;Levels;Hey Brother;The Nights;Waiting For Love|editorial
+SE|English|Dance|Swedish House Mafia|global|Don't You Worry Child;Save The World|dance-download
+SE|English|Dance|Eric Prydz|europe|Call on Me;Pjanoo|editorial
+SE|English|Rock|Europe|global|The Final Countdown;Carrie|editorial
+SE|English|Rock;Indie / Alternative|The Cardigans|global|Lovefool;My Favourite Game|editorial
+SE|English|Metal|Ghost|europe|Mary On A Cross;Square Hammer|editorial
+SE|Swedish|Pop|Veronica Maggio|local|Jag kommer;Välkommen in|editorial
+SE|Swedish|Pop|Håkan Hellström|local|Känn ingen sorg för mig Göteborg;Valborg|editorial
+SE|Swedish|Pop|Victor Leksell|local|Svag|editorial
+SE|Swedish|Pop|Bolaget|local|Kan inte gå;Ikväll igen;Låt mig va|sweden24
+SE|Swedish|Dance|Medina|local|Que Sera;Där palmerna bor|editorial
+NO|English|Pop|a-ha|global|Take on Me;The Sun Always Shines on T.V.|editorial
+NO|English|Dance|Alan Walker|global|Faded;Alone;The Spectre|editorial
+NO|English|Dance|Kygo|global|Firestone;Stole the Show;It Ain't Me|editorial
+NO|English|Pop|AURORA|local|Runaway;Running With The Wolves|editorial
+NO|English|Pop|Sigrid|local|Strangers;Don't Kill My Vibe|editorial
+NO|English|Electronic|Röyksopp|europe|Eple;What Else Is There?;Remind Me|editorial
+DK|English|Pop|Aqua|global|Barbie Girl;Doctor Jones|editorial
+DK|English|Pop|Lukas Graham|global|7 Years;Love Someone|editorial
+DK|English|Metal|Volbeat|europe|Still Counting;For Evigt|editorial
+DK|English|Pop|MØ|local|Final Song|editorial
+FR|English|Electronic;Dance|Daft Punk|global|Get Lucky;One More Time;Around the World;Harder, Better, Faster, Stronger|editorial
+FR|English|Dance|David Guetta|global|Titanium;Memories;When Love Takes Over;Sexy Bitch;I'm Good (Blue)|editorial
+FR|English|Dance|Bob Sinclar|europe|Love Generation;World, Hold On|editorial
+FR|English|Dance|Kungs|europe|This Girl;Never Going Home|editorial
+FR|English|Electronic|M83|global|Midnight City|editorial
+FR|French|Pop|Indila|europe|Dernière danse;Tourner Dans Le Vide|editorial
+FR|French|Pop|Zaz|europe|Je veux|editorial
+FR|French|Pop|Édith Piaf|europe|La vie en rose;Non, je ne regrette rien|editorial
+FR|French|Pop|Gims|local|Sapés comme jamais;Bella;Spider|editorial
+FR|French|Pop|Aya Nakamura|local|Djadja;Pookie|editorial
+FR|French|Pop|Louane|local|Avenir;Jour 1|editorial
+BE|French|Pop|Stromae|europe|Alors on danse;Papaoutai;Formidable|editorial
+BE|French|Pop|Angèle|local|Balance ton quoi;Tout oublier|editorial
+BE|English|Dance|Lost Frequencies|europe|Are You With Me;Reality;Where Are You Now|editorial
+BE|English|Dance|Technotronic|europe|Pump Up The Jam|editorial
+DE|German|Metal|Rammstein|europe|Du hast;Sonne;Engel;Deutschland|editorial
+DE|English|Rock|Scorpions|global|Wind Of Change;Rock You Like a Hurricane;Still Loving You|editorial
+DE|German|Pop|Nena|europe|99 Luftballons|editorial
+DE|English|Dance|Robin Schulz|europe|Sugar;Prayer in C|editorial
+DE|English|Dance|ATB|europe|9 PM (Till I Come);Your Love (9PM)|editorial
+DE|English|Dance|Cascada|europe|Everytime We Touch;Evacuate The Dancefloor|editorial
+DE|German|Rap / Hip Hop|Apache 207|local|Roller;Komet|editorial
+DE|German|Pop|Peter Schilling|europe|Major Tom (völlig losgelöst)|editorial
+DE|German|Pop|Helene Fischer|local|Atemlos durch die Nacht|editorial
+DE|English|Electronic|Kraftwerk|europe|The Model;Das Model;Autobahn|editorial
+NL|English|Dance|Tiësto|global|The Business;The Motto;Red Lights|editorial
+NL|English|Dance|Martin Garrix|global|Animals;Scared to Be Lonely;In the Name of Love|editorial
+NL|English|Dance|Armin van Buuren|europe|This Is What It Feels Like;Blah Blah Blah|editorial
+NL|English|Dance|Vengaboys|europe|Boom, Boom, Boom, Boom!!;We Like To Party! (The Vengabus)|editorial
+NL|English|Rock|Golden Earring|europe|Radar Love;Twilight Zone|editorial
+NL|English|Pop|Duncan Laurence|europe|Arcade|editorial
+IT|English|Rock|Måneskin|global|Beggin';I WANNA BE YOUR SLAVE|editorial
+IT|Italian|Pop|Eros Ramazzotti|europe|Più bella cosa;Cose della vita|editorial
+IT|Italian|Pop|Laura Pausini|local|La solitudine;Strani amori|editorial
+IT|Italian|Pop|Ricchi E Poveri|europe|Sarà perché ti amo;Mamma Maria|editorial
+IT|English|Dance|Eiffel 65|europe|Blue (Da Ba Dee);Move Your Body|editorial
+IT|English|Dance|Gigi D'Agostino|europe|L'Amour Toujours;Bla Bla Bla;The Riddle|editorial
+IT|English|Dance|Benny Benassi|europe|Satisfaction|editorial
+ES|Spanish|Pop;Latin|Enrique Iglesias|global|Bailando;Hero;Bailamos;DUELE EL CORAZON|editorial
+ES|Spanish|Pop;Latin|Rosalía|europe|DESPECHÁ;BIZCOCHITO|editorial
+ES|Spanish|Pop;Latin|Álvaro Soler|europe|Sofia;El Mismo Sol|editorial
+ES|Spanish|Pop;Latin|Las Ketchup|europe|The Ketchup Song (Aserejé)|editorial
+ES|Spanish|Pop;Latin|Alejandro Sanz|local|Corazón partío;Amiga mía|editorial
+ES|Spanish|Pop;Latin|La Oreja de Van Gogh|local|Rosas;La Playa|editorial
+FI|Finnish|Pop|Mirella|local|Timanttei;Luotathan;Uuteen eiliseen|finland24
+FI|Finnish|Pop|KUUMAA|local|Ylivoimainen;Tulipalo;Satama;Tuhoaisti|editorial
+FI|Finnish|Pop|ANI|local|Jos puhutaan totta|teosto24
+FI|Finnish|Rap / Hip Hop|Ege Zulu|local|Tunnista tuntiin|teosto24
+FI|Finnish|Pop|BEHM|local|Hei rakas;Frida;Sata vuotta|editorial
+FI|Finnish|Pop|BESS|local|Ram pam pam;Tempo|editorial
+FI|Finnish|Pop|Jenni Vartiainen|local|Ihmisten edessä;Missä muruseni on;En haluu kuolla tänä yönä|editorial
+FI|Finnish|Pop|Chisu|local|Baden-Baden;Sabotage;Kohtalon oma|editorial
+FI|Finnish|Pop|Haloo Helsinki!|local|Maailman toisella puolen;Beibi;Hulluuden highway;Reiviluola|editorial
+FI|Finnish|Pop|Kaija Koo|local|Tinakenkätyttö;Kuka keksi rakkauden;Supernaiset|editorial
+FI|Finnish|Pop|Antti Tuisku|local|Peto on irti;Sata salamaa;Keinutaan|editorial
+FI|Finnish|Pop|Ellinoora|local|Leijonakuningas;Elefantin paino|editorial
+FI|Finnish|Pop|Vesala|local|Tequila;Ei pystyny hengittää;Sulaa jäätä|editorial
+FI|Finnish|Pop|Anna Puu|local|C'est la vie;Säännöt rakkaudelle|editorial
+FI|Finnish|Pop|Erin|local|Vanha nainen hunningolla;Popeda|editorial
+FI|Finnish|Pop|SANNI|local|2080-luvulla;Että mitähän vittua;Me ei olla enää me|editorial
+FI|Finnish|Pop|PMMP|local|Rusketusraidat;Lautturi;Matkalaulu|editorial
+FI|Finnish|Rock|Apulanta|local|Teit meistä kauniin;Pahempi toistaan;Valot pimeyksien reunoilla|editorial
+FI|Finnish|Rock|Eppu Normaali|local|Murheellisten laulujen maa;Tahroja paperilla;Vuonna '85|editorial
+FI|Finnish|Rock|Popeda|local|Kuuma kesä;Pitkä kuuma kesä;Kersantti Karoliina|editorial
+FI|Finnish|Rock|Dingo|local|Autiotalo;Levoton Tuhkimo;Nahkatakkinen tyttö|editorial
+FI|Finnish|Rock|Yö|local|Joutsenlaulu;Rakkaus on lumivalkoinen|editorial
+FI|Finnish|Rock|Happoradio|local|Puhu äänellä jonka kuulen;Che Guevara|editorial
+FI|Finnish|Rock|Leevi and the Leavings|local|Pohjois-Karjala;Teuvo, maanteiden kuningas;Rin Tin Tin|editorial
+FI|Finnish|Rock|Anssi Kela|local|Nummela;Mikan faijan BMW;1972|editorial
+FI|Finnish|Rock|Maija Vilkkumaa|local|Ei;Satumaa-tango;Ingalsin Laura|editorial
+FI|Finnish|Rock|J. Karjalainen|local|Mennyt mies;Doris;Hän|editorial
+FI|Finnish|Rap / Hip Hop|JVG|local|Ikuinen vappu;Tarkenee;Hehkuu;Amatimies|editorial
+FI|Finnish|Rap / Hip Hop|Cheek|local|Timantit on ikuisia;Liekeissä;Jippikayjei;Kuka muu muka|editorial
+FI|Finnish|Rap / Hip Hop|Elastinen|local|Eteen ja ylös;Naurava kulkuri|editorial
+FI|Finnish|Rap / Hip Hop|Petri Nygård|local|Selvä päivä;Märkää|editorial
+FI|Finnish|Rap / Hip Hop|Teflon Brothers|local|Maradona (kesä '86);Pämppää;Lähiöunelmii|editorial
+FI|Finnish|Rap / Hip Hop|Gettomasa|local|Shamppanjadieetillä;Vastustamaton|editorial
+FI|Finnish|Rap / Hip Hop|William|local|Penelope|editorial
+FI|Finnish|Dance|Käärijä|europe|Cha Cha Cha|editorial
+FI|Finnish|Dance|Portion Boys|local|Vauhti kiihtyy;Kyläbaari|editorial
+FI|Finnish|Dance|Movetron|local|Romeo ja Julia;Ristinolla|editorial
+FI|Finnish|Dance|Aikakone|local|Odota;Taas saan lentää|editorial
+FI|English|Dance|Darude|global|Sandstorm;Feel The Beat|editorial
+FI|English|Dance|Bomfunk MC's|europe|Freestyler;B-Boys & Flygirls|editorial
+FI|English|Rock|The Rasmus|europe|In the Shadows;Guilty|editorial
+FI|English|Rock|Sunrise Avenue|europe|Fairytale Gone Bad;Hollywood Hills|editorial
+FI|English|Rock|Poets of the Fall|local|Carnival of Rust;Late Goodbye|editorial
+FI|English|Metal|Nightwish|europe|Nemo;Wish I Had an Angel;Amaranth|editorial
+FI|English|Metal|HIM|europe|Join Me in Death;Wings of a Butterfly;The Funeral of Hearts|editorial
+FI|English|Metal|Lordi|europe|Hard Rock Hallelujah|editorial
+FI|Finnish|Metal|Teräsbetoni|local|Taivas lyö tulta;Missä miehet ratsastaa|editorial
+FI|Finnish|Metal|Kotiteollisuus|local|Minä olen;Helvetistä itään|editorial
+AU|English|Rock|AC/DC|global|Highway to Hell;Back In Black;Thunderstruck;You Shook Me All Night Long|editorial
+AU|English|Pop|Sia|global|Chandelier;Cheap Thrills;Unstoppable|editorial
+AU|English|Pop|Kylie Minogue|global|Can't Get You out of My Head;Spinning Around;Padam Padam|editorial
+AU|English|Pop|Tones And I|global|Dance Monkey|uk-streams
+AU|English|Pop|The Kid LAROI|global|STAY;WITHOUT YOU|spotify20
+AU|English|Indie / Alternative|Tame Impala|global|The Less I Know The Better;Let It Happen|editorial
+AU|English|Indie / Alternative|Vance Joy|global|Riptide|uk-streams
+AU|English|Rock|Men At Work|global|Down Under;Who Can It Be Now?|editorial
+NZ|English|Pop|Lorde|global|Royals;Team;Green Light|editorial
+NZ|English|Pop|Benee|local|Supalonely;Glitter|editorial
+NZ|English|Pop|Kimbra|local|Settle Down|editorial
+NZ|English|Rock|Crowded House|global|Don't Dream It's Over;Weather With You|editorial
+CO|Spanish|Pop;Latin|Shakira|global|Hips Don't Lie;Whenever, Wherever;Waka Waka (This Time for Africa);La Tortura|editorial
+CO|Spanish|Latin|Karol G|europe|Si Antes Te Hubiera Conocido;Tusa;PROVENZA|los40
+CO|Spanish|Latin|Juanes|europe|La Camisa Negra;A Dios Le Pido|editorial
+CO|Spanish|Latin|J Balvin|global|Mi Gente;Ginza|editorial
+CO|Spanish|Latin|Maluma|local|Felices los 4;Hawái|editorial
+CO|Spanish|Latin|Manuel Turizo|local|La Bachata|editorial
+PR|Spanish|Latin|Luis Fonsi|global|Despacito;Échame La Culpa|editorial
+PR|Spanish|Latin|Daddy Yankee|global|Gasolina;Con Calma;Dura|editorial
+PR|Spanish|Latin|Don Omar|global|Danza Kuduro;Dile|editorial
+PR|Spanish|Latin|Bad Bunny|global|DÁKITI;Tití Me Preguntó;DtMF|editorial
+PR|Spanish|Latin|Ricky Martin|global|Livin' la Vida Loca;La Copa de la Vida;María|editorial
+BR|Portuguese|Latin|Michel Teló|europe|Ai Se Eu Te Pego|editorial
+BR|Portuguese|Latin|Gusttavo Lima|europe|Balada|editorial
+BR|Portuguese|Latin|Anitta|global|Envolver|editorial
+BR|Portuguese|Latin|Sérgio Mendes|global|Mas Que Nada|editorial
+BR|Portuguese|Latin|Jorge Ben Jor|local|País Tropical;Taj Mahal|editorial
+BR|Portuguese|Latin|Gilberto Gil|local|Aquele Abraço|editorial
+KR|Korean|K-pop;Pop|BTS|global|Dynamite;Butter;Boy With Luv|editorial
+KR|Korean|K-pop;Pop|BLACKPINK|global|How You Like That;DDU-DU DDU-DU;Kill This Love|editorial
+KR|Korean|K-pop|PSY|global|Gangnam Style;Gentleman|editorial
+KR|English|K-pop;Pop|ROSÉ|global|APT.;On The Ground|editorial
+KR|Korean|K-pop|TWICE|global|What is Love?;The Feels;FANCY|editorial
+KR|Korean|K-pop|Jung Kook|global|Seven;Standing Next to You|editorial
+KR|Korean|K-pop|NewJeans|global|OMG;Super Shy;Ditto|editorial
+KR|Korean|K-pop|Stray Kids|global|God's Menu;MANIAC|editorial
+JP|Japanese|J-pop|YOASOBI|local|アイドル;夜に駆ける;Idol;Yoru Ni Kakeru|editorial
+JP|Japanese|J-pop|Ado|local|うっせぇわ;新時代;Usseewa;New Genesis|editorial
+JP|Japanese|J-pop|Hikaru Utada|local|First Love;Automatic|editorial
+JP|Japanese|J-pop|Kenshi Yonezu|local|Lemon;KICK BACK|editorial
+JP|Japanese|J-pop|LiSA|local|紅蓮華;Gurenge;炎;Homura|editorial
+JP|Japanese|J-pop|Creepy Nuts|local|Bling-Bang-Bang-Born|editorial
+JM|English|Reggae|Bob Marley & The Wailers|global|Three Little Birds;Could You Be Loved;Is This Love;No Woman, No Cry;One Love / People Get Ready|editorial
+JM|English|Reggae|Sean Paul|global|Temperature;Get Busy;She Doesn't Mind|editorial
+JM|English|Reggae|Shaggy|global|It Wasn't Me;Angel;Boombastic|editorial
+JM|English|Reggae|Jimmy Cliff|global|I Can See Clearly Now;The Harder They Come|editorial
+JM|English|Reggae|Inner Circle|global|Bad Boys;Sweat (A La La La La Long)|editorial
+JM|English|Reggae|OMI|global|Cheerleader|editorial
+NG|English|Afrobeats|Rema|global|Calm Down|editorial
+NG|English|Afrobeats|Burna Boy|global|Last Last;On the Low|editorial
+NG|English|Afrobeats|Wizkid|global|Essence;Joro|editorial
+NG|English|Afrobeats|CKay|global|love nwantiti (ah ah ah)|editorial
+NG|English|Afrobeats|Ayra Starr|global|Rush|editorial
+NG|English|Afrobeats|Fireboy DML|global|Peru|editorial
+NG|English|Afrobeats|Tems|global|Free Mind;Love Me JeJe|editorial
+ZA|English|Afrobeats|Tyla|global|Water|editorial
+ZA|Zulu|Afrobeats|Master KG|europe|Jerusalema|editorial
+ZA|English|Pop|Jeremy Loops|local|Down South|editorial
+ZA|English|Rock|Seether|global|Broken;Fake It|editorial
+PT|Portuguese|Rock|Xutos & Pontapés|local|A Minha Casinha;Contentores|portugal
+PT|Portuguese|Rock|GNR|local|Dunas;Pronúncia do Norte|portugal
+PT|Portuguese|Rock|Rui Veloso|local|A Paixão;Chico Fininho|portugal
+PT|Portuguese|Rock|Táxi|local|Chiclete|portugal
+PT|Portuguese|Pop|António Variações|local|Canção do Engate;O Corpo É Que Paga|portugal
+PT|Portuguese|Pop|Doce|local|Bem Bom|portugal
+PT|Portuguese|Pop|Carlos Paião|local|Playback|portugal
+PT|Portuguese|Pop|Jorge Palma|local|O Bairro do Amor;Encosta-te a Mim|portugal
+PL|Polish|Rock|Perfect|local|Autobiografia;Nie płacz Ewka;Chcemy być sobą|poland
+PL|Polish|Rock|Lady Pank|local|Kryzysowa narzeczona;Zawsze tam, gdzie Ty|poland
+PL|Polish|Rock|Dżem|local|Whisky;Wehikuł czasu|poland
+PL|Polish|Rock|Budka Suflera|local|Jolka, Jolka pamiętasz;Takie tango|poland
+PL|Polish|Rock|Lombard|local|Przeżyj to sam;Szklana pogoda|poland
+PL|Polish|Pop|Bajm|local|Nie ma wody na pustyni;Józek, nie daruję Ci tej nocy|poland
+PL|Polish|Pop|Dawid Podsiadło|local|Małomiasteczkowy;Nie ma fal|editorial
+PL|Polish|Pop|Sanah|local|Szampan;Ale jazz!|editorial
+PL|Polish|Pop|Daria Zawiałow|local|Hej Hej!;Malinowy Chruśniak|editorial
+AT|German|Pop|Falco|europe|Rock Me Amadeus;Der Kommissar;Jeanny|editorial
+AT|English|Rock|Opus|europe|Live Is Life|austria
+AT|English|Dance|Klangkarussell|europe|Sonnentanz;Sonnentanz (Sun Don't Shine)|austria
+AT|English|Electronic|Parov Stelar|local|All Night;Booty Swing|editorial
+AT|German|Pop|EAV|local|Ba-Ba-Banküberfall;Märchenprinz|editorial
+CH|English|Dance|DJ BoBo|europe|Somebody Dance with Me;Everybody;Chihuahua|editorial
+CH|English|Dance|DJ Antoine|europe|Ma Chérie;Welcome to St. Tropez|editorial
+CH|English|Pop|Stefanie Heinzmann|local|My Man Is a Mean Man;Diggin' in the Dirt|editorial
+CH|English|Pop|Nemo|europe|The Code|editorial
+CH|English|Rock|Gotthard|local|Heaven;Lift U Up|editorial
+US|English|Pop|Gracie Abrams|global|That's So True|ifpi25
+GB|English|Pop|Lola Young|global|Messy|ifpi25
+US|English|Indie / Alternative|sombr|global|back to friends|ifpi25
+GB|English|R&B;Soul / Funk|Olivia Dean|global|Man I Need|aria-number1
+US|English|Indie / Alternative|Noah Kahan|global|Stick Season|ifpi24
+US|English|R&B|Tommy Richman|global|MILLION DOLLAR BABY|ifpi24
+GB|English|Pop|Artemas|europe|i like the way you kiss me|germany24
+AU|English|Dance|CYRIL|europe|Stumblin' In|germany24
+FR|English|Dance|Ofenbach|europe|Overdrive|germany24

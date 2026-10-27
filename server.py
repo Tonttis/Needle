@@ -1,4 +1,6 @@
 from audio_cache import AudioCache
+from recognition import VERSION as CATALOG_VERSION, in_difficulty
+from catalog import filter_options
 import hashlib
 import copy
 import sqlite3
@@ -84,6 +86,7 @@ def queue_credit(t):
         finally:credit_pending.discard(t['id'])
     credit_workers.submit(run)
 def prepare_catalog(genre,region,difficulty):
+    if difficulty=='Normal':difficulty='Medium'
     if genre not in CATALOG_GENRES or region not in REGIONS or difficulty not in DIFFICULTIES:
         raise ValueError('Invalid music filters')
     key=(genre,region,difficulty)
@@ -91,7 +94,7 @@ def prepare_catalog(genre,region,difficulty):
         job=catalog_jobs.get(key)
         if job and (not job.done() or (job.exception() is None and time.time()-catalog_started.get(key,0)<86400)):return job
         def build():
-            path=DATA/('pool-full-'+hashlib.sha256('|'.join(key).encode()).hexdigest()[:20]+'.json')
+            path=DATA/('pool-'+CATALOG_VERSION+'-'+hashlib.sha256('|'.join(key).encode()).hexdigest()[:20]+'.json')
             if path.exists() and time.time()-path.stat().st_mtime<86400:
                 try:return json.loads(path.read_text())
                 except (ValueError,OSError):pass
@@ -125,7 +128,9 @@ def state(r,p):
     settle(r)
     out={k:r[k] for k in ['code','mode','multi','phase','round','rounds','stage','deadline','genre','history']}
     out['players']=[dict(name=v['name'],score=v['score'],me=k==p,host=k==r['host'],submitted=k in r['guesses']) for k,v in r['players'].items()]
-    if '_stats' not in r:r['_stats']={'tracks':len(r['pool']),'artists':len({artist_key(t) for t in r['pool']}),'countries':len({t.get('country','?') for t in r['pool']})}
+    if '_stats' not in r:
+        playable=[t for t in r['pool'] if 'recognition' not in t or in_difficulty(t,r.get('difficulty','Medium'))]
+        r['_stats']={'tracks':len(r['pool']),'answers':len(playable),'artists':len({artist_key(t) for t in playable}),'countries':len({t.get('country','?') for t in playable})}
     out['catalog']=r['_stats']
     out['region']=r.get('region','Worldwide'); out['difficulty']=r.get('difficulty','Normal')
     if r['phase'] in ['reveal','finished']:
@@ -172,6 +177,7 @@ def read_preview(url):
         return data,content
 
 audio_cache=AudioCache(load_audio)
+FILTER_OPTIONS=filter_options()
 class Handler(BaseHTTPRequestHandler):
     protocol_version="HTTP/1.1"
     def setup(self):
@@ -185,6 +191,7 @@ class Handler(BaseHTTPRequestHandler):
                 job=prepare_catalog(q.get('genre',['Mixed'])[0],q.get('region',['Worldwide'])[0],q.get('difficulty',['Normal'])[0])
                 return self.reply({'ready':job.done() and job.exception() is None})
             if u.path=='/api/genres': return self.reply(CATALOG_GENRES)
+            if u.path=='/api/config': return self.reply(FILTER_OPTIONS)
             if u.path=='/api/search':
                 with lock:
                     r=rooms[q.get('room',[''])[0]]

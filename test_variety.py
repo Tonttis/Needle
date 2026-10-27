@@ -28,7 +28,8 @@ class VarietyTests(unittest.TestCase):
         tracks=self.game('Europe',10)
         self.assertLessEqual(sum(t['country']=='FI' for t in tracks),1)
         self.assertEqual(len({t['artist_id'] for t in tracks}),10)
-        self.assertEqual(len({t['country'] for t in tracks}),10)
+        # Familiarity now takes priority over forced one-country-per-round quotas.
+        self.assertGreaterEqual(len({t['country'] for t in tracks}),2)
  def test_finnish_rounds_never_repeat_artist_before_exhaustion(self):
     for rounds in [3,10,20,30]:
         tracks=self.game('Finland',rounds)

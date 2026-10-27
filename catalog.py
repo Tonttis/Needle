@@ -57,21 +57,48 @@ for seed in SEEDS:
     if seed['name']=='Europe':seed['genre']='Rock'
     if seed['name'] in ['Ares','Damso']:seed['genre']='Rap / Hip Hop'
 SEEDS=list({(norm(s['name']),s['genre']):s for s in SEEDS}.values())
-REGIONS=['Worldwide','Europe','North America','Finland']
-GENRES=['Mixed','Pop','Rock','Metal','Rap / Hip Hop','Dance','Electronic','R&B']
-DIFFICULTIES=['Easy','Normal','Hard']
+from recognition import PROFILES, COUNTRIES, AREAS, VERSION, text_key, song_key, profile, recognition, classify_tracks, in_difficulty
+# Merge per-artist tags: Mixed never fetches/weights one artist twice for crossover genres.
+merged={}
+for seed in SEEDS:
+    key=text_key(seed['name'])
+    if key not in merged:merged[key]=dict(seed,genres=[seed['genre']])
+    elif seed['genre'] not in merged[key]['genres']:merged[key]['genres'].append(seed['genre'])
+for key,p in PROFILES.items():
+    if key not in merged:merged[key]=dict(name=p['name'],country=p['country'],region=region_for(p['country']),language=p['language'],genre=p['genres'][0],genres=[])
+    seed=merged[key]
+    seed.update(country=p['country'],region=region_for(p['country']),language=p['language'])
+    seed['genres']=list(dict.fromkeys(seed['genres']+p['genres']))
+SEEDS=list(merged.values())
+REGIONS=['Worldwide','Europe','North America',*AREAS,*COUNTRIES]
+GENRES=['Mixed','Pop','Rock','Metal','Rap / Hip Hop','Dance','Electronic','R&B','Indie / Alternative','Punk / Pop Punk','Soul / Funk','Country','Jazz','Blues','Reggae','Latin','K-pop','J-pop','Afrobeats']
+DIFFICULTIES=['Easy','Medium','Hard','Expert','Impossible']
 def eligible(genre,region):
-    return [s for s in SEEDS if (genre=='Mixed' or s['genre']==genre) and (region=='Worldwide' or s['region']==region or region=='Europe' and s['region']=='Finland')]
+    def matches(s):
+        if region in COUNTRIES:return s.get('country','FI' if s['region']=='Finland' else '')==COUNTRIES[region]
+        if region in AREAS:return s.get('country') in AREAS[region]
+        if region=='Europe':return s['region'] in ('Europe','Finland') or bool(profile(s) and profile(s)['reach'] in ('global','europe'))
+        return region=='Worldwide' or s['region']==region
+    return [dict(s,genre=genre if genre!='Mixed' else s['genre']) for s in SEEDS if (genre=='Mixed' or genre in s.get('genres',[s['genre']])) and matches(s)]
+
+def filter_options():
+    # Static coverage check avoids advertising combinations with only one artist.
+    support={}
+    for region in REGIONS:
+        support[region]={}
+        for genre in GENRES:
+            seeds=eligible(genre,region)
+            if len(seeds)<4:continue
+            from recognition import recognition
+            easy=sum(any(recognition(seed,t,region,genre)>=85 for t in (profile(seed) or {}).get('examples',[])) for seed in seeds)
+            support[region][genre]=[d for d in DIFFICULTIES if d!='Easy' or easy>=4]
+    return dict(regions=REGIONS,genres=GENRES,difficulties=DIFFICULTIES,support=support)
 def title_key(t):
     title=re.sub(r'\s*[\(\[].*?(?:remaster|version|edit).*?[\)\]]','',t['title'],flags=re.I)
     title=re.sub(r'\s*-\s*(?:\d{4}\s+)?remaster.*','',title,flags=re.I)
-    return norm(t['artist'])+'|'+norm(title)
+    return str(t.get('artist_id') or norm(t.get('seed_artist',t['artist'])))+'|'+song_key(title)
 def band(tracks,difficulty):
-    # Artist-relative popularity, never a claim of global chart positions.
-    tracks=sorted(tracks,key=lambda t:t.get('rank',0),reverse=True)
-    if difficulty=='Easy': return tracks[:5]
-    if difficulty=='Normal': return tracks[:15]
-    return tracks[5:40] or tracks
+    return [t for t in tracks if in_difficulty(t,difficulty)]
 
 def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
     seeds=eligible(genre,region)
@@ -79,6 +106,9 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
     # Country-first discovery prevents a heavily populated local lane dominating.
     # Interleave genres within countries; fetch many more independent artists.
     selected=discovery_order(seeds)
+    if difficulty in ('Easy','Medium','Normal'):
+        # Known hits are fetched first; retain the entire discovery registry.
+        selected.sort(key=lambda seed:0 if any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[])) else 1 if profile(seed) else 2)
     def load(seed):
         try:
             results=fetch('search/artist?limit=10&q='+__import__('urllib.parse',fromlist=['quote']).quote(seed['name'])).get('data',[])
@@ -89,13 +119,16 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
             for raw in rows:
                 if not raw.get('preview') or str(raw['artist']['id'])!=str(artist['id']): continue
                 if re.search(r'\b(live|karaoke|tribute|sped up|slowed|remix)\b',raw.get('title_version','')+' '+raw['title'],re.I):continue
-                t=clean(raw);t.update(genre=seed['genre'],language=seed['language'],region=seed['region'],country=seed.get('country','FI' if seed['region']=='Finland' else 'GB'),artist_id=str(artist['id']),rank=raw.get('rank',0))
+                t=clean(raw);t.update(seed_artist=seed['name'],genre=seed['genre'],language=seed['language'],region=seed['region'],country=seed.get('country','FI' if seed['region']=='Finland' else 'GB'),artist_id=str(artist['id']),rank=raw.get('rank',0))
                 k=title_key(t)
                 if k not in dedup or t['rank']>dedup[k]['rank']:dedup[k]=t
-            return band(list(dedup.values()),difficulty)
+            return classify_tracks(list(dedup.values()),seed,region,genre)
         except (ValueError,KeyError):return []
     groups=[]
     minimum=min(12,len({norm(s['name']) for s in seeds}))
+    if difficulty=='Easy':
+        known=sum(any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[])) for seed in seeds)
+        minimum=min(12,max(4,known))
     target=min(target_artists,len(selected))
     # Retry with fresh artists if some lookups fail, rather than silently starting
     # a tiny game from the first two artists whose requests happened to succeed.
@@ -108,12 +141,13 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
             counts={}
             for t in tracks.values(): counts[t['language']]=counts.get(t['language'],0)+1
             result=[t for t in tracks.values() if counts[t['language']]>=4]
-            artists={artist_key(t) for t in result}
-            countries={t['country'] for t in result}
-            diverse=len(artists)>=minimum and (region not in ['Europe','Worldwide'] or len(countries)>=min(4,len({x.get('country','?') for x in seeds})))
+            playable=band(result,difficulty)
+            artists={artist_key(t) for t in playable}
+            countries={t['country'] for t in playable}
+            diverse=len(artists)>=minimum
             if start+40>=target and diverse: break
     if not result or not diverse:
-        raise ValueError('Not enough distinct artists are available for a varied game. Please retry or broaden this selection; no narrow game was started.')
+        raise ValueError('Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs.')
     return result
 
 def discovery_order(seeds):
@@ -141,8 +175,10 @@ def artist_key(t):
     return str(t.get('artist_id') or norm(t['artist']))
 
 def choose_song(r):
-    candidates=[t for t in r['pool'] if t['id'] not in r['used']]
-    if not candidates:r['used']=[];candidates=r['pool'][:]
+    playable=[t for t in r['pool'] if 'recognition' not in t or in_difficulty(t,r.get('difficulty','Medium'))]
+    if not playable:raise ValueError('No tracks meet this difficulty. Choose another mix.')
+    candidates=[t for t in playable if t['id'] not in r['used']]
+    if not candidates:r['used']=[];candidates=playable[:]
     history=r.setdefault('artist_counts',{})
     country_counts=r.setdefault('country_counts',{})
     if r.get('region')=='Europe':
@@ -150,19 +186,22 @@ def choose_song(r):
         if country_counts.get('FI',0)>=limit:
             candidates=[t for t in candidates if t.get('country')!='FI']
             if not candidates:
-                candidates=[t for t in r['pool'] if t.get('country')!='FI']
+                candidates=[t for t in playable if t.get('country')!='FI']
             if not candidates:raise ValueError('Europe needs available non-Finnish artists. Create a new mix.')
     # Only least-used eligible artists can be drawn, regardless of track count.
     least=min(history.get(artist_key(t),0) for t in candidates)
     candidates=[t for t in candidates if history.get(artist_key(t),0)==least]
-    countries={t.get('country','?') for t in candidates}
-    least_country=min(country_counts.get(c,0) for c in countries)
-    country=random.choice(sorted(c for c in countries if country_counts.get(c,0)==least_country))
-    candidates=[t for t in candidates if t.get('country','?')==country]
-    artists=sorted({artist_key(t) for t in candidates})
+    # Soft country weights preserve variety without demanding one obscure artist
+    # from every country. Artist uniformity prevents prolific catalogs dominating.
+    by_artist={}
+    for track in candidates:by_artist.setdefault(artist_key(track),[]).append(track)
     recent=r.get('recent_artists',[])
-    artist=random.choice([a for a in artists if a not in recent[-3:]] or artists)
-    song=random.choice([t for t in candidates if artist_key(t)==artist])
+    artists=sorted(a for a in by_artist if a not in recent[-3:]) or sorted(by_artist)
+    weights=[1/(1+country_counts.get(by_artist[a][0].get('country','?'),0)*.35) for a in artists]
+    artist=random.choices(artists,weights=weights,k=1)[0]
+    tracks=by_artist[artist]
+    song=random.choice(tracks)
+    country=song.get('country','?')
     history[artist]=history.get(artist,0)+1;country_counts[country]=country_counts.get(country,0)+1
     r.setdefault('recent_artists',[]).append(artist)
     return song
@@ -171,10 +210,15 @@ def round_choices(song,tracks):
     lane=[t for t in tracks if t.get('language')==song.get('language') and t['id']!=song['id']]
     # Prefer genre, nearby popularity and different artists. A sparse genre may
     # use same-language neighbors instead of deleting that country from the pool.
-    lane.sort(key=lambda t:(t.get('genre')!=song.get('genre'),abs(t.get('rank',0)-song.get('rank',0))))
+    lane.sort(key=lambda t:(t.get('genre')!=song.get('genre'),abs(t.get('recognition',0)-song.get('recognition',0)),abs(t.get('rank',0)-song.get('rank',0))))
     board=random.sample(lane[:80],min(24,len(lane)))+[song]
     random.shuffle(board)
     neighbors=lane[:60]
+    if 'recognition' in song:
+        for distance in (15,30):
+            close=[t for t in lane if abs(t.get('recognition',0)-song['recognition'])<=distance]
+            if len({artist_key(t) for t in close if artist_key(t)!=artist_key(song)})>=3:
+                neighbors=close[:60];break
     other_artists={}
     for t in neighbors:
         if artist_key(t)!=artist_key(song):other_artists.setdefault(artist_key(t),[]).append(t)
