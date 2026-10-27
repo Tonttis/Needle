@@ -87,7 +87,7 @@ def queue_credit(t):
     credit_workers.submit(run)
 def prepare_catalog(genre,region,difficulty):
     if difficulty=='Normal':difficulty='Medium'
-    if genre not in CATALOG_GENRES or region not in REGIONS or difficulty not in DIFFICULTIES:
+    if genre not in CATALOG_GENRES or region not in REGIONS or difficulty not in DIFFICULTIES+['Hits']:
         raise ValueError('Invalid music filters')
     key=(genre,region,difficulty)
     with catalog_guard:
@@ -119,7 +119,7 @@ def settle(r):
     wins=[p for p,g in r['guesses'].items() if g==r['song']['id']]
     r['history'].append({'stage':r['stage'],'correct':len(wins)})
     if wins or r['stage']==4 or r['mode']=='choice':
-        for p in wins: r['players'][p]['score']+= (5-r['stage']) if not r['multi'] and r['mode']=='guess' else 1
+        for p in wins: r['players'][p]['score']+= (5-r['stage']) if not r['multi'] and r['mode']!='choice' else 1
         r['phase']='reveal'; r['winners']=wins
     else:
         r['stage']+=1; r['guesses']={}; r['deadline']=time.time()+30
@@ -197,7 +197,7 @@ class Handler(BaseHTTPRequestHandler):
                     r=rooms[q.get('room',[''])[0]]
                     if q.get('token',[''])[0] not in r['players']: raise ValueError('Invalid session')
                     term=q.get('q',[''])[0][:100]
-                    search_room={'pool':r['pool'],'song':r.get('song')} if r['phase']=='playing' and r['mode']=='guess' else None
+                    search_room={'pool':r['pool'],'song':r.get('song')} if r['phase']=='playing' and r['mode']!='choice' else None
                     round_number=r['round']; stage=r['stage']
                 rows=suggestions(search_room,term) if search_room else []
                 # Search never waits for external contributor lookups.
@@ -224,13 +224,14 @@ class Handler(BaseHTTPRequestHandler):
             if n>4096: raise ValueError('Request too large')
             d=json.loads(self.rfile.read(n)); action=self.path.split('/')[-1]
             if action=='create':
+                if d.get('mode')=='hits':d.update(genre='Mixed',region='Worldwide',difficulty='Hits')
                 tracks=pool(d.get('genre','Mixed'),d.get('region','Worldwide'),d.get('difficulty','Normal'))
                 with lock:
                     for c in list(rooms):
                         if time.time()-rooms[c]['created']>86400: del rooms[c]
                     if len(rooms)>100: raise ValueError('Server room limit reached')
                     code=secrets.token_hex(3).upper(); p=secrets.token_urlsafe(24)
-                    r={'code':code,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':'choice' if d.get('mode')=='choice' else 'guess','multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[]}
+                    r={'code':code,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits') else 'guess','multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[]}
                     rooms[code]=r
                     if not r['multi']: advance(r)
                     return self.reply({'room':code,'token':p})

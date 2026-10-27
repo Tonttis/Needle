@@ -57,7 +57,7 @@ for seed in SEEDS:
     if seed['name']=='Europe':seed['genre']='Rock'
     if seed['name'] in ['Ares','Damso']:seed['genre']='Rap / Hip Hop'
 SEEDS=list({(norm(s['name']),s['genre']):s for s in SEEDS}.values())
-from recognition import PROFILES, COUNTRIES, AREAS, VERSION, text_key, song_key, profile, recognition, classify_tracks, in_difficulty
+from recognition import HOT_HITS, PROFILES, COUNTRIES, AREAS, VERSION, text_key, song_key, profile, recognition, classify_tracks, in_difficulty
 # Merge per-artist tags: Mixed never fetches/weights one artist twice for crossover genres.
 merged={}
 for seed in SEEDS:
@@ -106,6 +106,8 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
     # Country-first discovery prevents a heavily populated local lane dominating.
     # Interleave genres within countries; fetch many more independent artists.
     selected=discovery_order(seeds)
+    if difficulty=='Hits':
+        selected.sort(key=lambda seed:0 if text_key(seed['name']) in HOT_HITS else 1)
     if difficulty in ('Easy','Medium','Normal'):
         # Known hits are fetched first; retain the entire discovery registry.
         selected.sort(key=lambda seed:0 if any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[])) else 1 if profile(seed) else 2)

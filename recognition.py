@@ -2,7 +2,7 @@
 Popularity ranks are only a secondary signal, never proof that a song is Easy.
 """
 import pathlib,re,unicodedata
-VERSION='v7-recognition-1'
+VERSION='v8-hits-1'
 COUNTRIES={'Finland':'FI','United Kingdom':'GB','Ireland':'IE','Sweden':'SE','Norway':'NO','Denmark':'DK','Germany':'DE','France':'FR','Belgium':'BE','Netherlands':'NL','Italy':'IT','Spain':'ES','Portugal':'PT','Poland':'PL','Austria':'AT','Switzerland':'CH','United States':'US','Canada':'CA','Australia':'AU','New Zealand':'NZ','Brazil':'BR','Colombia':'CO','Puerto Rico':'PR','South Korea':'KR','Japan':'JP','Jamaica':'JM','Nigeria':'NG','South Africa':'ZA'}
 AREAS={'Nordics':{'FI','SE','NO','DK','IS'},'Latin America':{'BR','CO','PR','MX','AR','CL','CU','DO'},'Asia':{'JP','KR','IN','TH','PH'},'Africa':{'NG','ZA','GH','CM','KE'},'Oceania':{'AU','NZ'}}
 def text_key(value):
@@ -14,6 +14,13 @@ def song_key(value):
  value=re.sub(r'\s*[-–]\s*(?:\d{4}\s+)?(?:remaster(?:ed)?|radio edit|single version|original mix).*$', '',value,flags=re.I)
  value=re.sub(r'\s*[\[(](?:\d{4}\s+)?(?:remaster(?:ed)?|radio edit|single version|original mix)[^\])]*[\])]','',value,flags=re.I)
  return text_key(value)
+HOT_HITS={}
+for line in pathlib.Path(__file__).with_name('hot_hits.tsv').read_text().splitlines():
+ if not line or line.startswith('#'):continue
+ artist,titles=line.split('|')
+ HOT_HITS[text_key(artist)]={song_key(t) for t in titles.split(';')}
+def is_hot_hit(artist,title):return song_key(title) in HOT_HITS.get(text_key(artist),set())
+
 PROFILES={}
 for line in pathlib.Path(__file__).with_name('recognition_data.tsv').read_text().splitlines():
  if not line or line.startswith('#'):continue
@@ -43,9 +50,9 @@ def classify_tracks(tracks,seed,region,genre):
   known=recognition(seed,t['title'],region,genre)
   rank=max(0,min(1_000_000,int(t.get('rank') or 0)))
   score=known or (68 if position<3 and rank>=400_000 else 60 if position<8 and rank>=150_000 else 48 if position<15 else 32 if position<30 else 16)
-  t.update(recognition=score,recognition_source=profile(seed)['evidence'] if known else 'provider-relative',seed_artist=seed['name'],artist_position=position)
+  t.update(hot_hit=is_hot_hit(seed['name'],t['title']),recognition=score,recognition_source=profile(seed)['evidence'] if known else 'provider-relative',seed_artist=seed['name'],artist_position=position)
  return tracks
 
 def in_difficulty(t,difficulty):
  score=t.get('recognition',0)
- return {'Easy':score>=85,'Medium':score>=55,'Normal':score>=55,'Hard':40<=score<85,'Expert':25<=score<55,'Impossible':score<25}.get(difficulty,False)
+ return {'Hits':t.get('hot_hit',False),'Easy':score>=85,'Medium':score>=55,'Normal':score>=55,'Hard':40<=score<85,'Expert':25<=score<55,'Impossible':score<25}.get(difficulty,False)

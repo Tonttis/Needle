@@ -1,6 +1,6 @@
-# Needle V7
+# Needle V8
 
-A private two-mode music guessing game with solo play, online rooms, animated records, reactive particles and audio analysers. This release rebuilds song recognition and scene selection. See [CATALOG_RESEARCH.md](CATALOG_RESEARCH.md) for sources, rules and limitations.
+A private three-mode music guessing game with solo play, online rooms, animated records, reactive particles and audio analysers. This release rebuilds song recognition and scene selection. See [CATALOG_RESEARCH.md](CATALOG_RESEARCH.md) for sources, rules and limitations.
 
 ## Deploy
 
@@ -8,13 +8,13 @@ A private two-mode music guessing game with solo play, online rooms, animated re
 docker compose up -d --build
 ```
 
-Open http://localhost:3000 or your server's address. In Coolify, commit/copy the **complete package** into the application repository and rebuild/redeploy the Compose service. Preserve `.env` and `data/`. The header must show **V7**. This ZIP does not update GitHub or the live server automatically.
+Open http://localhost:3000 or your server's address. In Coolify, commit/copy the **complete package** into the application repository and rebuild/redeploy the Compose service. Preserve `.env` and `data/`. The header must show **V8**. This ZIP does not update GitHub or the live server automatically.
 
 New required files include `recognition.py` and `recognition_data.tsv`; retain `audio_cache.py`. Docker copies them automatically. V7 ignores old pool selection files while reusing metadata/audio caches. A cold mix may still take time to build; Start waits up to 20 seconds and preserves the background job if it needs a retry. Selecting filters preloads the mix.
 
 ## Music selection
 
-- 862 artist discovery anchors; 928 named-song calibration entries across 388 artists. Counts describe source metadata, not guaranteed playable provider tracks.
+- 863 artist discovery anchors; 930 named-song calibration entries across 389 artists. Counts describe source metadata, not guaranteed playable provider tracks.
 - 18 genres plus Mixed: Pop, Rock, Metal, Rap / Hip Hop, Dance, Electronic, R&B, Indie / Alternative, Punk / Pop Punk, Soul / Funk, Country, Jazz, Blues, Reggae, Latin, K-pop, J-pop and Afrobeats.
 - 28 country scenes, plus Worldwide, Europe, North America, Nordics, Latin America, Asia, Africa and Oceania.
 - **Europe is an audience-oriented mix**, including international crossover artists. Specific countries focus on their local artists. Neither follows your IP location.
@@ -63,6 +63,13 @@ node test_audio_ui.cjs
 node test_mix_ui.cjs
 ```
 
-All 44 Python tests and both JavaScript checks passed. The filter controller was tested in a simulated DOM; a local browser run was blocked because the browser binary could not be downloaded. The suite covers scoring, multiplayer game/lobby lifecycle, search, contributor enrichment, catalogue/preview caching, audio failure recovery and non-blocking latency. V7 adds explicit unknown-song rejection for Easy, regional recognition, genre standards, country/genre configuration, difficulty boundaries, familiarity-matched distractors and preservation of the full search catalogue.
+All 50 Python tests and both JavaScript checks passed. The filter controller was tested in a simulated DOM; a local browser run was blocked because the browser binary could not be downloaded. The suite covers scoring, multiplayer game/lobby lifecycle, search, contributor enrichment, catalogue/preview caching, audio failure recovery and non-blocking latency. V7 adds explicit unknown-song rejection for Easy, regional recognition, genre standards, country/genre configuration, difficulty boundaries, familiarity-matched distractors and preservation of the full search catalogue.
 
 Selection simulations include 1,000 Europe games against a deliberately Finnish-heavy fixture and 500 Europe Easy games using the recognition anchors across both game modes. These verify artist rotation, Finland caps and Easy admission; they do not measure human recognition. Provider access here returned a Site Unavailable HTML response, so fresh live song resolution/playback is not verified in this environment.
+
+## V8: Hottest Hits
+A third home-screen mode for all-time recognition: 159 explicit songs by 91 artists, resolved against the provider at runtime. Examples include Billie Jean, Dancing Queen, Never Gonna Give You Up, Smells Like Teen Spirit, Poker Face and Sandstorm. A familiar artist's unlisted songs never qualify. No claim that every listener knows every song.
+
+It uses the same five progressive snippets and guess search as Name the Song, with solo scoring (5→1) and online rooms. It forces Mixed / Worldwide / Hits server-side. Scene, genre and difficulty controls are hidden while selected and return when leaving the mode; name and rounds remain adjustable. The preset preloads independently and keeps full fetched tracks for search. Provider coverage can reduce the actual playable count.
+
+Include the new `hot_hits.tsv` in your deployment. New versioned pool files prevent reusing old selections. The supplied Spotify playlist was used as a style reference, not imported: Spotify blocked direct access; an indexed video description links it to an all-time most-recognisable-songs collection. This is a maintained editorial selection, not a live current-charts feed.
