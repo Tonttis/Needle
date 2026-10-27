@@ -37,3 +37,6 @@ body[data-motion=full] .vinyl,body[data-motion=calm] .vinyl{animation:visible-sp
 .playlist-input{display:grid;gap:8px;margin-top:20px;color:var(--muted);font-size:12px}.playlist-hint{font-size:11px;color:var(--muted);line-height:1.5}
 
 .recap li .recap-links{flex:0 0 auto;gap:8px;text-align:right}
+
+/* Party and playlist are full-sized cards in the same grid. */
+.mode.party-mode,.mode.playlist-card{display:block;width:auto;padding:30px;background:linear-gradient(120deg,#242834,#191c24);text-align:left}.mode.party-mode.selected,.mode.playlist-card.selected{background:linear-gradient(125deg,#dff791,#bfd660);color:#202916;border-color:#e5ff87}.mode.party-mode h2,.mode.playlist-card h2{font-size:30px}.cassette-art svg,.playlist-art svg{width:100%;height:100%;fill:#b5a1ff14;stroke:#c4b8ff;stroke-width:3;opacity:.8;filter:drop-shadow(0 0 16px #a99bff44)}.playlist-art svg{stroke:#d5f87b;fill:#d5f87b10}.mode.selected .cassette-art svg,.mode.selected .playlist-art svg{stroke:#33421f;fill:#33421f18}.setup #playlist-field{grid-column:1/-1}.setup #playlist-mode-field{min-width:0}@media(max-width:650px){.mode.party-mode,.mode.playlist-card{padding:24px}.mode.party-mode h2,.mode.playlist-card h2{font-size:25px}}

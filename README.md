@@ -63,6 +63,42 @@ node test_audio_ui.cjs
 node test_mix_ui.cjs
 ```
 
+All 50 Python tests and both JavaScript checks passed. The filter controller was tested in a simulated DOM; a local browser run was blocked because the browser binary could not be downloaded. The suite covers scoring, multiplayer game/lobby lifecycle, search, contributor enrichment, catalogue/preview caching, audio failure recovery and non-blocking latency. V7 adds explicit unknown-song rejection for Easy, regional recognition, genre standards, country/genre configuration, difficulty boundaries, familiarity-matched distractors and preservation of the full search catalogue.
+
+Selection simulations include 1,000 Europe games against a deliberately Finnish-heavy fixture and 500 Europe Easy games using the recognition anchors across both game modes. These verify artist rotation, Finland caps and Easy admission; they do not measure human recognition. Provider access here returned a Site Unavailable HTML response, so fresh live song resolution/playback is not verified in this environment.
+## V8.1 video readiness repair
+Built on the uploaded modified version. Video race downloads a complete 480p H.264 video with audio, falling back to full-length audio. FFprobe checks duration and the audio stream. Files are cached under data/race-media and cleaned automatically. A media file is limited to 80 MiB.
+
+Browsers fetch the complete file before playing; guessing is hidden until listeners have successfully unlocked playback. Autoplay restrictions show a Start playback button. Online rounds wait for every non-skipped player, then begin after a short shared countdown. The server uses actual media duration instead of 30 seconds. Retry/skip is available during loading errors; ordinary correct guesses still end the race. Late correct guesses earn at least one point. Home and round changes stop old playback. The video element survives state polls. Volume controls the actual player.
+
+Deploy the full package, including race_media.py, with the included Dockerfile (FFmpeg/ffprobe and yt-dlp required). Preserve .env and data/. Header: V8.1. No live deployment was performed. YouTube may block downloads or return an incorrect search result; those external conditions cannot be guaranteed. Browser/live YouTube playback could not be verified in this environment. Python regressions cover readiness, full-length timing, skip, scoring and multiplayer; JavaScript syntax was checked.
+
+## V8.2 YouTube search repair
+Corrects conflicting subprocess capture arguments that prevented every YouTube search from running. Explicitly enables the Docker-installed Node runtime for yt-dlp. Rebuild the image to update yt-dlp; the header shows V8.2. YouTube may still block the server or require authentication. Live playback was not verified here.
+
+## V8.3 playback and cache
+Race playback attempts to start automatically once downloaded; browser autoplay restrictions may require a click. The shared server starts the race after the players have unlocked playback. Cache files expire 30 days after download and least-recently-used files are removed above 2 GiB; in-use files are protected until a round ends. Cleanup runs at startup, hourly and on cache use. Temporary downloads may use extra space while in progress.
+
+The previous Spotify-preview message was incorrect: the optional reveal preview is an Apple iTunes Search preview; the Spotify link is a search link. The reveal now waits for that lookup and labels the fallback correctly. No Spotify API is configured.
+
+## V8.4 video race guesses
+Video Race allows repeated guesses. Incorrect guesses trigger a five-second per-player cooldown enforced by the server; correct guesses finish the race as before. The separate Skip song control remains available, including during cooldown. The snippet skip control is hidden in Video Race.
+
+## V8.5 race results
+Multiplayer Video Race reveals the winning player name to everyone; correct names display instead of a misleading skipped/timeout message. Scores remain unchanged.
+
+## V8.6 multiplayer results
+All multiplayer modes retain each player’s correct, incorrect or skipped result and display the names of everyone who answered correctly beneath it. Winner names are only sent after the answer is revealed.
+
+## V8.7 streamlined invitations
+An invite link opens a focused name-and-join screen showing the host, mode, mix, number of rounds and player count. Unavailable, full or started rooms show a clear message. Home removes the invitation from the address bar. The room lookup exposes only lobby details, never session tokens or the current song.
+
+## V8.8 Video Race scoring
+Correct guesses earn 20 to 1 points in 20 equal time bands across the full media duration. The first 5% earns 20, the halfway mark earns 10, and the final 5% earns 1. Skip and timeout earn 0. In multiplayer the fastest correct player receives the points. The on-screen available score updates during playback.
+
+## V8.9 mode card artwork
+The four mode cards use a responsive two-column desktop layout and a single column on small screens. Name the Song has a music illustration; Pick the Song has four stylised options; Video Race and Hottest Hits use locally bundled animated GIF backgrounds. The concert is an original generated scene with animated camera/light movement, and the flame GIF is similarly animated from original artwork. Motion: Off uses still images.
+
 ## V9.0: Party, decades, recap and playlists
 
 Party mode lets the host pick any combination of Name the Song, Pick the Song, Video Race and Hottest Hits. Rounds are randomly shuffled in cycles so selected modes are represented; all scores share one scoreboard. Existing scoring remains: multiplayer snippet/choice hits earn one point, whereas Video Race awards 20–1 based on elapsed time, so video rounds have more impact. Hottest Hits requires at least four matching hit artists in the mix.
@@ -76,3 +112,6 @@ Paste a YouTube or Spotify playlist URL in the optional playlist field. Its song
 Spotify requires user authorization: set `SPOTIFY_ACCESS_TOKEN` on the server, or for automatic renewal set `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` and `SPOTIFY_REFRESH_TOKEN` obtained through the Spotify authorization code flow. Do not commit these values. The direct token takes precedence and expires; unset it when using refresh credentials. In Spotify Development Mode, the authorized user must own or collaborate on the playlist, even if it is public. Access outside that scope depends on Spotify's app quota. A Spotify link is metadata only; Spotify audio is not downloaded. See https://developer.spotify.com/documentation/web-api/tutorials/code-flow and https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide.
 
 Deploy the entire package including `playlists.py`, and preserve `.env` and `data/`. Docker Compose passes the Spotify environment variables to the container. Live Spotify, YouTube and Deezer access was not verified from this environment; automated tests use mocked provider responses. Header: V9.0.
+
+## V9.1 mode cards
+Party and Custom Playlists are full-size mode cards. Select Custom Playlists to reveal the playlist URL and game-type fields in the setup area; switching modes retains the entered URL without using it in other modes. Playlist Party mode exposes the same round controls.
