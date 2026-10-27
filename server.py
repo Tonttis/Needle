@@ -1,4 +1,6 @@
 import math
+import logging
+import leaderboard as boards
 from race_media import prepare as prepare_race_media, start_janitor
 from playlists import match_playlist, identify as identify_playlist
 from audio_cache import AudioCache
@@ -8,9 +10,9 @@ import hashlib
 import copy
 import sqlite3
 import json, os, secrets, time, random, threading, urllib.request, urllib.parse, subprocess, pathlib, mimetypes
-from catalog import choose_song, artist_key, build_pool, round_choices, norm, REGIONS, DIFFICULTIES, GENRES as CATALOG_GENRES
+from catalog import choose_song, artist_key, build_pool, round_choices, norm, song_history_keys, REGIONS, DIFFICULTIES, GENRES as CATALOG_GENRES
 from difflib import SequenceMatcher
-from concurrent.futures import ThreadPoolExecutor,as_completed
+from concurrent.futures import Future,ThreadPoolExecutor,as_completed
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 ROOT=pathlib.Path(__file__).parent
 DATA=ROOT/'data'; DATA.mkdir(exist_ok=True)
@@ -54,7 +56,7 @@ def clean(t):
     names=list(dict.fromkeys(a['name'] for a in [t['artist']]+t.get('contributors',[]) if a.get('name')))
     artist=', '.join(names)
     query=urllib.parse.quote(artist+' '+t['title'])
-    return {'id':str(t['id']),'album_id':str(t.get('album',{}).get('id','')),'title':t['title'],'artist':artist,'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link',''),
+    return {'id':str(t['id']),'album_id':str(t.get('album',{}).get('id','')),'album_release_date':str(t.get('album',{}).get('release_date','')),'title':t['title'],'artist':artist,'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link',''),
             'spotify_url':'https://open.spotify.com/search/'+query}
 def credit(t):
     if t.get('_credits'): return t
@@ -88,6 +90,10 @@ credit_workers=ThreadPoolExecutor(max_workers=2)
 catalog_jobs={}
 catalog_status={};catalog_tokens={}
 catalog_started={}
+catalog_accessed={}
+CATALOG_ROTATE_SECONDS=6*60*60
+CATALOG_CHECK_SECONDS=15*60
+CATALOG_BOOTSTRAP=(('Mixed','Europe','Easy','All'),('Mixed','Worldwide','Easy','All'),('Mixed','Worldwide','Hits','All'))
 catalog_guard=threading.Lock()
 credit_pending=set()
 def queue_credit(t):
@@ -100,17 +106,52 @@ def queue_credit(t):
 DECADES=['All','1980s','1990s','2000s','2010s','2020s']
 def filter_decade(rows,decade,progress=None):
     start=int(decade[:4]);ids={str(t.get('album_id')) for t in rows if t.get('album_id')}
-    def lookup(album_id):
-        try:return album_id,int(str(fetch('album/'+album_id).get('release_date',''))[:4])
-        except (ValueError,KeyError,TypeError):return album_id,None
-    if progress:progress('dates',0,len(ids))
+    def year_of(value):
+        try:
+            year=int(str(value)[:4]);return year if 1800<=year<=2200 else None
+        except (ValueError,TypeError):return None
     years={}
+    for t in rows:
+        album_id=str(t.get('album_id',''));year=year_of(t.get('album_release_date'))
+        if album_id in ids and year is not None:years[album_id]=year
+    if progress:progress('dates',len(years),len(ids))
+    # Artist album lists carry the same album release dates as individual album
+    # details. Only accept exact album ID matches; compilations, incomplete
+    # pages, errors and missing dates are resolved individually below.
+    groups={}
+    for t in rows:
+        artist=str(t.get('artist_id',''));album_id=str(t.get('album_id',''))
+        if artist and album_id in ids and album_id not in years:groups.setdefault(artist,set()).add(album_id)
+    def artist_albums(item):
+        artist,wanted=item;found={};offset=0
+        try:
+            while wanted-set(found) and offset<200:
+                data=fetch('artist/'+artist+'/albums?limit=100&index='+str(offset)).get('data',[])
+                if not isinstance(data,list):break
+                for album in data:
+                    album_id=str(album.get('id',''));year=year_of(album.get('release_date'))
+                    if album_id in wanted and year is not None:found[album_id]=year
+                if len(data)<100:break
+                offset+=100
+        except (ValueError,KeyError,TypeError):pass
+        return found
+    useful=[(artist,album_ids) for artist,album_ids in groups.items() if len(album_ids)>=4]
+    if useful:
+        with ThreadPoolExecutor(max_workers=6) as workers:
+            futures=[workers.submit(artist_albums,item) for item in useful]
+            for future in as_completed(futures):
+                years.update(future.result())
+                if progress:progress('dates',len(years),len(ids))
+    def lookup(album_id):
+        try:return album_id,year_of(fetch('album/'+album_id).get('release_date'))
+        except (ValueError,KeyError,TypeError):return album_id,None
+    missing=ids-set(years)
     with ThreadPoolExecutor(max_workers=6) as workers:
-        futures=[workers.submit(lookup,album_id) for album_id in ids]
+        futures=[workers.submit(lookup,album_id) for album_id in missing]
         for future in as_completed(futures):
             album_id,year=future.result();years[album_id]=year
             if progress:progress('dates',len(years),len(ids))
-    result=[dict(t,release_year=years[t['album_id']]) for t in rows if t.get('album_id') in years and years[t['album_id']] is not None and start<=years[t['album_id']]<start+10]
+    result=[dict(t,release_year=years[str(t['album_id'])]) for t in rows if str(t.get('album_id','')) in years and years[str(t['album_id'])] is not None and start<=years[str(t['album_id'])]<start+10]
     counts={}
     for track in result:
         language=track.get('language','');counts[language]=counts.get(language,0)+1
@@ -124,8 +165,11 @@ def prepare_catalog(genre,region,difficulty,decade='All'):
     if decade not in DECADES:raise ValueError('Invalid decade')
     key=(genre,region,difficulty,decade)
     with catalog_guard:
+        catalog_accessed[key]=time.time()
         job=catalog_jobs.get(key)
-        if job and (not job.done() or (job.exception() is None and time.time()-catalog_started.get(key,0)<86400)):return job
+        # Keep serving the last successful generation while a replacement is
+        # built. The scheduler swaps it atomically after successful preparation.
+        if job and (not job.done() or job.exception() is None):return job
         catalog_status[key]={'phase':'starting','completed':0,'total':None}
         def progress(phase,completed,total):
             with catalog_guard:catalog_status[key]={'phase':phase,'completed':completed,'total':total}
@@ -134,7 +178,19 @@ def prepare_catalog(genre,region,difficulty,decade='All'):
             if path.exists() and time.time()-path.stat().st_mtime<86400:
                 try:return json.loads(path.read_text())
                 except (ValueError,OSError):pass
-            rows=build_pool(fetch,clean,genre,region,difficulty,progress=progress)
+            rows=None
+            # Reuse a finished unfiltered pool across decade choices; never
+            # wait on another job here, avoiding worker-pool deadlocks.
+            if decade!='All':
+                base_key=(genre,region,difficulty,'All')
+                with catalog_guard:base_job=catalog_jobs.get(base_key);base_started=catalog_started.get(base_key,0)
+                if base_job and time.time()-base_started<86400 and base_job.done() and base_job.exception() is None:rows=copy.deepcopy(base_job.result())
+                if rows is None:
+                    base_path=DATA/('pool-v9-'+CATALOG_VERSION+'-'+hashlib.sha256('|'.join(base_key).encode()).hexdigest()[:20]+'.json')
+                    if base_path.exists() and time.time()-base_path.stat().st_mtime<86400:
+                        try:rows=json.loads(base_path.read_text())
+                        except (ValueError,OSError):pass
+            if rows is None:rows=build_pool(fetch,clean,genre,region,difficulty,progress=progress)
             if decade!='All':
                 rows=filter_decade(rows,decade,progress=progress)
                 playable=[t for t in rows if in_difficulty(t,difficulty)]
@@ -143,6 +199,78 @@ def prepare_catalog(genre,region,difficulty,decade='All'):
             tmp=path.with_suffix('.tmp');tmp.write_text(json.dumps(rows));tmp.replace(path)
             return rows
         job=catalog_workers.submit(build);catalog_jobs[key]=job;catalog_started[key]=time.time();return job
+def catalog_cache_path(key):
+    return DATA/('pool-v9-'+CATALOG_VERSION+'-'+hashlib.sha256('|'.join(key).encode()).hexdigest()[:20]+'.json')
+
+def discard_saved_mixes():
+    # The metadata, profiles, scores, daily snapshots and media are separate.
+    # Only remove mix files from previous processes, never user data.
+    import re
+    pattern=re.compile(r'^pool-(?:full-[0-9a-f]{20}|v[0-9]+-.+-[0-9a-f]{20})(?:\.(?:json|tmp)|\.json\.[0-9a-f]{12}\.tmp)$')
+    removed=0
+    for path in DATA.glob('pool-*'):
+        if path.is_file() and pattern.fullmatch(path.name):
+            path.unlink(missing_ok=True);removed+=1
+    return removed
+
+def refresh_catalog(key):
+    """Build a fresh generation; keep old usable until a full replacement exists."""
+    with catalog_guard:
+        old=catalog_jobs.get(key)
+        if old is None or not old.done() or old.exception() is not None:return False
+    genre,region,difficulty,decade=key
+    rows=build_pool(fetch,clean,genre,region,difficulty)
+    if decade!='All':
+        rows=filter_decade(rows,decade)
+        if len({artist_key(t) for t in rows if in_difficulty(t,difficulty)})<4:
+            raise ValueError('Not enough artists with dated tracks for this refreshed mix.')
+    path=catalog_cache_path(key)
+    tmp=path.with_name(path.name+'.'+secrets.token_hex(6)+'.tmp')
+    try:
+        tmp.write_text(json.dumps(rows))
+        ready=Future();ready.set_result(rows)
+        with catalog_guard:
+            # Do not replace a newer foreground generation or a running job.
+            if catalog_jobs.get(key) is not old:return False
+            tmp.replace(path)
+            catalog_jobs[key]=ready;catalog_started[key]=time.time()
+            catalog_status[key]={'phase':'ready','completed':0,'total':None}
+        return True
+    finally:tmp.unlink(missing_ok=True)
+
+def catalog_rotation_loop(stop_event=None):
+    """Warm popular mixes serially, then refresh active mixes in the background."""
+    stop_event=stop_event or threading.Event()
+    for key in CATALOG_BOOTSTRAP:
+        if stop_event.is_set():return
+        try:prepare_catalog(*key).result()
+        except Exception as exc:logging.warning('Catalog warm-up failed for %s: %s',key,exc)  # Other mixes must still warm.
+    while not stop_event.wait(CATALOG_CHECK_SECONDS):
+        now=time.time()
+        with catalog_guard:
+            # Quiet, unused mixes are discarded rather than refreshed forever.
+            stale=[key for key,job in catalog_jobs.items() if key not in CATALOG_BOOTSTRAP
+                   and job.done() and now-catalog_accessed.get(key,0)>=86400]
+            for key in stale:
+                try:catalog_cache_path(key).unlink(missing_ok=True)
+                except OSError:pass
+                catalog_jobs.pop(key,None);catalog_started.pop(key,None)
+                catalog_status.pop(key,None);catalog_accessed.pop(key,None)
+                for token in [t for t,k in catalog_tokens.items() if k==key]:catalog_tokens.pop(token,None)
+            due=[(catalog_started.get(key,0),key) for key,job in catalog_jobs.items()
+                 if job.done() and job.exception() is None
+                 and now-catalog_started.get(key,0)>=CATALOG_ROTATE_SECONDS
+                 and (key in CATALOG_BOOTSTRAP or now-catalog_accessed.get(key,0)<86400)]
+        for _,key in sorted(due):
+            if stop_event.is_set():return
+            try:refresh_catalog(key)
+            except Exception as exc:logging.warning('Catalog refresh failed for %s: %s',key,exc)  # Retain the working generation.
+
+def start_catalog_rotation():
+    discard_saved_mixes()
+    thread=threading.Thread(target=catalog_rotation_loop,name='catalog-rotation',daemon=True)
+    thread.start();return thread
+
 def pool(genre,region='Worldwide',difficulty='Normal',decade='All'):
     try:return copy.deepcopy(prepare_catalog(genre,region,difficulty,decade).result(timeout=20))
     except TimeoutError:raise ValueError('This new mix is still loading in the background. Try Start again shortly; the work is being reused.')
@@ -195,7 +323,7 @@ def choose_round(r):
         r['mode']=cycle.pop();r['previous_mode']=r['mode'];r['difficulty']='Hits' if r['mode']=='hits' else r['base_difficulty']
     return choose_song(r)
 
-_SELECTION_KEYS=('used','artist_counts','country_counts','recent_artists','party_cycle','mode','difficulty','previous_mode')
+_SELECTION_KEYS=('used','artist_counts','country_counts','language_counts','recent_artists','party_cycle','mode','difficulty','previous_mode')
 def reserve_next_round(r):
     if r.get('game_mode',r.get('mode')) not in ('race','party') or r['round']>=r.get('rounds',1):return
     shadow=dict(r)
@@ -209,11 +337,20 @@ def reserve_next_round(r):
     if shadow['mode']=='race':pending['future']=queue_prefetch(dict(song))
 
 def advance(r):
+    names=[player.get('name','') for player in r.get('players',{}).values()]
+    prior_seen=r.get('_played_song_ids',set())
+    r['_played_song_ids']=boards.played_song_ids(names)
     pending=r.pop('_next_round',None)
-    if pending:
+    # Another concurrent game may have played the reserved track since it was
+    # selected. Re-select rather than use an outdated prefetch decision.
+    if pending and song_history_keys(pending['song']) & (r['_played_song_ids']-prior_seen):pending=None
+    if r.get('daily_ids'):
+        r['song']=next(t for t in r['pool'] if t['id']==r['daily_ids'][r['round']]);r['_current_prefetch']=None
+    elif pending:
         r.update(pending['selection']);r['song']=pending['song'];r['_current_prefetch']=pending.get('future')
     else:
         r['song']=choose_round(r);r['_current_prefetch']=None
+    r['score_max']=r.get('score_max',0)+(20 if r['mode']=='race' else 1 if r['mode']=='choice' or r.get('multi') else 5)
     r['used'].append(r['song']['id'])
     r['stage']=0; r['guesses']={}; r['history']=[]; r['round']+=1; r['phase']='playing'; r['deadline']=time.time()+45
     r['round_started']=time.time();r['recap_recorded']=False
@@ -234,6 +371,9 @@ def advance(r):
     r['deadline']=r['deadline'] if r.get('mode')=='race' else time.time()+45
     if r.get('mode')=='race':queue_youtube(r)
     r['reveal_metadata']={};r['reveal_pending']=False;r['reveal_done']=False
+    if r.get('mode')!='race':
+        keys=song_history_keys(r['song']);identity=next((k for k in keys if k.startswith('song:')),None)
+        boards.record_played(names,r['song']['id'],identity);r['_played_song_ids'].update(keys)
     reserve_next_round(r)
 def settle(r):
     if r['phase']!='playing': return
@@ -290,6 +430,7 @@ def settle_race(r):
 
 def state(r,p):
     settle(r)
+    if r['phase']=='finished' and r.get('match_id'):boards.record_match(r)
     if r['phase']=='reveal' and not r.get('recap_recorded'):
         track=r['song'];winners=r.get('winners',[])
         r.setdefault('recap',[]).append(dict(round=r['round'],mode=r['mode'],title=track['title'],artist=track['artist'],art=track.get('art',''),link=track.get('link',''),spotify_url=track.get('spotify_url',''),winners=[dict(name=r['players'][w]['name'],seconds=round(r.get('guess_times',{}).get(w,0),1)) for w in winners if w in r['players']]))
@@ -304,7 +445,7 @@ def state(r,p):
         r['_stats']={'tracks':len(r['pool']),'answers':len(playable),'artists':len({artist_key(t) for t in playable}),'countries':len({t.get('country','?') for t in playable})}
     out['catalog']=r['_stats']
     if r['phase']=='finished':out['recap']=r.get('recap',[])
-    out['playlist_url']=r.get('playlist_url','') if p==r['host'] and r['phase']=='lobby' else '';out['base_difficulty']=r.get('base_difficulty',r.get('difficulty','Normal'));out['playlist_report']=r.get('playlist_report');out['game_mode']=r.get('game_mode',r['mode']);out['party_modes']=r.get('party_modes',[]);out['decade']=r.get('decade','All');out['region']=r.get('region','Worldwide'); out['difficulty']=r.get('difficulty','Normal')
+    out['daily_date']=r.get('daily_date');out['score_max']=r.get('score_max',0);out['playlist_url']=r.get('playlist_url','') if p==r['host'] and r['phase']=='lobby' else '';out['base_difficulty']=r.get('base_difficulty',r.get('difficulty','Normal'));out['playlist_report']=r.get('playlist_report');out['game_mode']=r.get('game_mode',r['mode']);out['party_modes']=r.get('party_modes',[]);out['decade']=r.get('decade','All');out['region']=r.get('region','Worldwide'); out['difficulty']=r.get('difficulty','Normal')
     if r['phase'] in ['reveal','finished']:
         out['correct']=p in r.get('winners',[])
         out['result']='correct' if out['correct'] else 'incorrect' if r['guesses'].get(p) else 'skipped'
@@ -514,6 +655,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             u=urllib.parse.urlparse(self.path); q=urllib.parse.parse_qs(u.query)
+            if u.path=='/api/leaderboard':
+                mode=q.get('mode',['guess'])[0];difficulty=q.get('difficulty',['Easy'])[0];multi=q.get('multi',['0'])[0]=='1';daily=q.get('daily',[''])[0]
+                if mode not in ('guess','choice','race','hits','party') or difficulty not in DIFFICULTIES+['Hits','Playlist','Normal']:raise ValueError('Invalid leaderboard filter')
+                if daily and (len(daily)!=10 or not all(c.isdigit() or c=='-' for c in daily)):raise ValueError('Invalid date')
+                return self.reply({'entries':boards.leaderboard(mode,difficulty,multi,daily or None),'date':daily or None})
+            if u.path=='/api/daily':return self.reply({'date':boards.day_utc(),'rounds':5,'mode':'guess','difficulty':'Easy','region':'Europe','ready':boards.daily_existing(boards.day_utc()) is not None})
+            if u.path=='/api/profile':return self.reply(boards.profile(q.get('name',[''])[0][:24]))
             if u.path=='/api/warm':
                 job=prepare_catalog(q.get('genre',['Mixed'])[0],q.get('region',['Worldwide'])[0],q.get('difficulty',['Normal'])[0],q.get('decade',['All'])[0])
                 return self.reply({'ready':job.done() and job.exception() is None})
@@ -605,6 +753,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply({'job':token})
             if action=='playlist-prepare':
                 token,_=prepare_playlist(str(d.get('url','')).strip());return self.reply({'job':token})
+            if action=='daily-create':
+                day=boards.day_utc();snapshot=boards.daily_existing(day)
+                if snapshot is None:snapshot=boards.daily_snapshot(day,pool('Mixed','Europe','Easy'))
+                tracks,ids=snapshot;name=str(d.get('name','')).strip()[:24]
+                if not name:raise ValueError('Enter a name to play the daily challenge.')
+                with lock:
+                    code=secrets.token_hex(3).upper();p=secrets.token_urlsafe(24)
+                    r={'code':code,'match_id':secrets.token_urlsafe(24),'score_max':0,'daily_date':day,'daily_ids':ids,'hydrate':True,'created':time.time(),'players':{p:{'name':name,'score':0}},'host':p,'pool':tracks,'used':[],'mode':'guess','game_mode':'guess','party_modes':[],'base_difficulty':'Easy','multi':False,'genre':'Mixed','region':'Europe','difficulty':'Easy','decade':'All','phase':'lobby','round':0,'rounds':5,'stage':0,'deadline':0,'guesses':{},'history':[]}
+                    rooms[code]=r;advance(r);return self.reply({'room':code,'token':p})
             if action=='create':
                 if d.get('mode')=='hits':d.update(genre='Mixed',region='Worldwide',difficulty='Hits')
                 playlist_url=str(d.get('playlist_url','')).strip()
@@ -625,7 +782,7 @@ class Handler(BaseHTTPRequestHandler):
                         if time.time()-rooms[c]['created']>86400: del rooms[c]
                     if len(rooms)>100: raise ValueError('Server room limit reached')
                     code=secrets.token_hex(3).upper(); p=secrets.token_urlsafe(24)
-                    r={'code':code,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits','race','party') else 'guess','game_mode':'party' if d.get('mode')=='party' else d.get('mode','guess'),'party_modes':party_modes,'playlist_report':playlist_report,'playlist_url':playlist_url,'base_difficulty':d.get('difficulty','Normal'),'multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'decade':d.get('decade','All'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[],
+                    r={'code':code,'match_id':secrets.token_urlsafe(24),'score_max':0,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits','race','party') else 'guess','game_mode':'party' if d.get('mode')=='party' else d.get('mode','guess'),'party_modes':party_modes,'playlist_report':playlist_report,'playlist_url':playlist_url,'base_difficulty':d.get('difficulty','Normal'),'multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'decade':d.get('decade','All'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[],
                        'previous_artists':[str(a) for a in d.get('previous_artists',[]) or []][:24],'previous_songs':[str(s) for s in d.get('previous_songs',[]) or []][:40]}
                     rooms[code]=r
                     if not r['multi']: advance(r)
@@ -654,7 +811,7 @@ class Handler(BaseHTTPRequestHandler):
                 with lock:
                     r=rooms.get(code)
                     if r is not room or token!=r['host'] or r['phase']!='lobby':raise ValueError('Lobby changed while preparing settings')
-                    r.update(pool=tracks,mode=mode,game_mode=mode,party_modes=party_modes,party_cycle=[],playlist_url=url,playlist_report=report,genre=genre,region=region,difficulty=difficulty,base_difficulty=difficulty,decade=decade,rounds=rounds,used=[],artist_counts={},country_counts={},recent_artists=[],_next_round=None)
+                    r.update(pool=tracks,mode=mode,game_mode=mode,party_modes=party_modes,party_cycle=[],playlist_url=url,playlist_report=report,genre=genre,region=region,difficulty=difficulty,base_difficulty=difficulty,decade=decade,rounds=rounds,used=[],artist_counts={},country_counts={},language_counts={},recent_artists=[],_next_round=None)
                     r.pop('_stats',None)
                     return self.reply(state(r,token))
             with lock:
@@ -672,6 +829,8 @@ class Handler(BaseHTTPRequestHandler):
                         r['race_ready'].add(p)
                         if not r.get('race_started') and r['race_ready']>=set(r['players'])-set(r['guesses']):
                             r['race_started']=time.time()+2;r['deadline']=r['race_started']+r['race_duration'];r['race_status']='playing'
+                            keys=song_history_keys(r['song']);identity=next((k for k in keys if k.startswith('song:')),None)
+                            boards.record_played([v.get('name','') for k,v in r['players'].items() if k not in r['guesses']],r['song']['id'],identity);r.setdefault('_played_song_ids',set()).update(keys)
                     elif action=='race-audio' and not r.get('race_started') and not r.get('race_audio_only'):
                         r['race_audio_only']=True;r['audioKey']=secrets.token_urlsafe(24);r['race_ready']=set();r.pop('race_path',None);queue_youtube(r)
                     elif action=='race-retry' and r.get('race_status')=='error':queue_youtube(r)
@@ -680,6 +839,8 @@ class Handler(BaseHTTPRequestHandler):
                         if len(r['guesses'])==len(r['players']):r['phase']='reveal';r['winners']=[]
                         elif not r.get('race_started') and r.get('race_status')=='ready' and r['race_ready']>=set(r['players'])-set(r['guesses']):
                             r['race_started']=time.time()+2;r['deadline']=r['race_started']+r['race_duration'];r['race_status']='playing'
+                            keys=song_history_keys(r['song']);identity=next((k for k in keys if k.startswith('song:')),None)
+                            boards.record_played([v.get('name','') for k,v in r['players'].items() if k not in r['guesses']],r['song']['id'],identity);r.setdefault('_played_song_ids',set()).update(keys)
                     return self.reply(state(r,p))
                 if action=='guess':
                     if r.get('mode')=='race' and (not r.get('race_started') or time.time()<r['race_started']):raise ValueError('Waiting for media playback')
@@ -703,15 +864,19 @@ class Handler(BaseHTTPRequestHandler):
                     # room (or the same browser's next solo game) avoids
                     # immediate repeats when the pool is large enough.
                     tail=[t for t in r.get('pool',[]) if t['id'] in r.get('used',[])[-20:]]
-                    r.update(phase='lobby',mode='party' if r.get('game_mode')=='party' else r['mode'],difficulty=r.get('base_difficulty',r['difficulty']),party_cycle=[],round=0,stage=0,guesses={},history=[],winners=[],
+                    r.update(match_id=secrets.token_urlsafe(24),score_max=0,_scores_recorded=False,phase='lobby',mode='party' if r.get('game_mode')=='party' else r['mode'],difficulty=r.get('base_difficulty',r['difficulty']),party_cycle=[],round=0,stage=0,guesses={},history=[],winners=[],
                              recap=[],used=[],deadline=0,guess_times={},race_cooldowns={},race_wrong={},race_started=None,recap_recorded=False,_next_round=None,_current_prefetch=None,previous_artists=[artist_key(t) for t in tail],
                              previous_songs=[t['id'] for t in tail],
-                             artist_counts={},country_counts={},recent_artists=[])
+                             artist_counts={},country_counts={},language_counts={},recent_artists=[])
                 elif action=='next':
                     if p!=r['host'] or r['phase'] not in ['lobby','reveal']: raise ValueError('Only host can continue')
-                    if r['round']>=r['rounds']: r['phase']='finished'
+                    if r['round']>=r['rounds']:
+                        r['phase']='finished';boards.record_match(r)
                     else: advance(r)
                 else: raise ValueError('Unknown action')
                 return self.reply(state(r,p))
         except Exception as e: self.reply({'error':str(e)},400)
-if __name__=='__main__': ThreadingHTTPServer(('0.0.0.0',int(os.getenv('PORT',3000))),Handler).serve_forever()
+if __name__=='__main__':
+    http=ThreadingHTTPServer(('0.0.0.0',int(os.getenv('PORT',3000))),Handler)
+    start_catalog_rotation()
+    http.serve_forever()

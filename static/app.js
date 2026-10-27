@@ -8,7 +8,7 @@ $('#volume').oninput=()=>{const volume=Number($('#volume').value);if($('#race-vi
 
 async function api(path,data){const r=await fetch('/api/'+path,data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:{});const v=await r.json();if(!r.ok)throw Error(v.error||'Request failed');return v}
 function error(e){$('#error').textContent=e.message}
-async function action(a,extra={}){mutationEpoch++;try{$('#error').textContent='';if(a==='create'){try{const prev=JSON.parse(localStorage.getItem('needle-prev')||'null');if(prev)extra={previous_artists:prev.artists,previous_songs:prev.songs,...extra}}catch{}}const v=await api(a,{...session,...extra});if(v.token){session=v;sessionStorage.setItem('needle',JSON.stringify(v));await refresh()}else if(v.phase){state=v;render();if(state.phase==='reveal'&&state.answer)renderRevealExtras(state.answer)}else await refresh()}catch(e){error(e)}}
+async function action(a,extra={}){mutationEpoch++;try{$('#error').textContent='';if(a==='create'||a==='daily-create'){try{const prev=JSON.parse(localStorage.getItem('needle-prev')||'null');if(prev)extra={previous_artists:prev.artists,previous_songs:prev.songs,...extra}}catch{}}const v=await api(a,{...session,...extra});if(v.token){session=v;sessionStorage.setItem('needle',JSON.stringify(v));await refresh()}else if(v.phase){state=v;render();if(state.phase==='reveal'&&state.answer)renderRevealExtras(state.answer)}else await refresh()}catch(e){error(e)}}
 function youtubeLink(answer){const url=answer.videoId?'https://www.youtube.com/watch?v='+encodeURIComponent(answer.videoId):(answer.artist&&answer.title?'https://www.youtube.com/results?search_query='+encodeURIComponent(answer.artist+' '+answer.title+' official video'):'');return url?'<a class="yt-open" target="_blank" rel="noopener" href="'+esc(url)+'">Watch on YouTube</a>':''}
 function renderRevealExtras(answer){
  try{
@@ -93,6 +93,13 @@ if(!history.state?.needle){history.replaceState({needle:'home'},'',location.href
 window.addEventListener('popstate',()=>{goHome();history.pushState({needle:'app'},'',location.href)});
 function clearInviteURL(){const u=new URL(location.href);u.searchParams.delete('room');history.replaceState(history.state,'',u)}
 function renderHome(){document.body.classList.remove('in-game');renderRaceVideo();clearInviteURL();$('#invite').hidden=true;$('#home').hidden=false;$('#game').hidden=true;window.dispatchEvent(new CustomEvent('needle:screen',{detail:{home:true}}))}
+// Name-only profiles are remembered in this browser; the server treats the name as a shared label.
+try{$('#name').value=localStorage.getItem('needle-name')||'';$('#invite-name').value=localStorage.getItem('needle-name')||''}catch{}
+for(const id of ['name','invite-name'])$('#'+id).addEventListener('input',()=>{try{localStorage.setItem('needle-name',$('#'+id).value.trim())}catch{}});
+let boardRequest=0;
+async function loadBoard(){const request=++boardRequest,kind=$('#board-kind').value,daily=kind==='daily';for(const id of ['board-mode','board-difficulty','board-multi'])$('#'+id).disabled=daily;$('#board-status').textContent='Loading scores…';try{const info=daily?await api('daily'):null;const params=new URLSearchParams({mode:daily?'guess':$('#board-mode').value,difficulty:daily?'Easy':$('#board-difficulty').value,multi:daily?'0':$('#board-multi').value});if(daily)params.set('daily',info.date);const [data,stats]=await Promise.all([api('leaderboard?'+params.toString()),$('#name').value.trim()?api('profile?name='+encodeURIComponent($('#name').value.trim())):Promise.resolve(null)]);if(request!==boardRequest)return;$('#board-status').textContent=data.entries.length?(daily?'Daily · '+data.date+' UTC':'Top scores'):'No completed games yet.';$('#profile-stats').textContent=stats?$('#name').value.trim()+': '+stats.games+' games · '+stats.total_points+' total points · '+stats.best_percentage+'% personal best · '+stats.daily_days+' daily dates played':'';$('#board-list').innerHTML=data.entries.map((row,i)=>'<li><span>'+(i+1)+'. '+esc(row.name)+'</span><strong>'+row.percentage+'%</strong><small>'+row.points+' / '+row.maximum+' points · '+row.rounds+' rounds</small></li>').join('')}catch(e){if(request===boardRequest)$('#board-status').textContent=e.message}}
+$('#show-leaderboards').onclick=()=>{$('#leaderboards').hidden=false;loadBoard()};$('#close-leaderboards').onclick=()=>{$('#leaderboards').hidden=true;boardRequest++};for(const id of ['board-kind','board-mode','board-difficulty','board-multi'])$('#'+id).onchange=()=>{if(id==='board-mode'){if($('#board-mode').value==='hits')$('#board-difficulty').value='Hits';else if($('#board-difficulty').value==='Hits')$('#board-difficulty').value='Easy'}loadBoard()};
+$('#daily-start').onclick=async()=>{const name=$('#name').value.trim();if(!name){$('#error').textContent='Enter your name in the setup below to play the daily challenge.';$('#name').focus();return}const generation=++importGeneration;$('#daily-start').disabled=true;$('#playlist-progress').hidden=false;$('#playlist-cancel').hidden=false;$('#playlist-progress-bar').removeAttribute('value');$('#playlist-progress-label').textContent='Preparing today’s challenge…';$('#playlist-progress-count').textContent='';$('#error').textContent='';try{const info=await api('daily');if(!info.ready)await waitForPreparation('catalog',{genre:'Mixed',region:'Europe',difficulty:'Easy',decade:'All'},generation);if(generation!==importGeneration)return;await action('daily-create',{name});}catch(e){if(generation===importGeneration)error(e)}finally{if(generation===importGeneration)$('#playlist-progress').hidden=true;$('#daily-start').disabled=false}};
 let inviteCopyTimer;
 $('#share').onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/?room='+session.room);clearTimeout(inviteCopyTimer);$('#share').textContent='Invite copied ✓';inviteCopyTimer=setTimeout(()=>{$('#share').textContent='Copy invite ↗'},5000)}catch(e){$('#error').textContent='Room code: '+session.room}};
 $('#next').onclick=()=>{if(state?.phase==='lobby'&&lobbyDirty){error(Error('Apply your changed settings before starting.'));return}action('next')};$('#return-lobby').onclick=()=>action('lobby');$('#finish-home').onclick=goHome;$('#skip').onclick=()=>guess('');async function guess(id){if(submitting||!state||state.submitted||state.phase!=='playing'||(state.mode==='race'&&state.serverTime<(state.race_cooldown_until||0)))return;submitting=true;try{ctx ||= new AudioContext();await ctx.resume()}catch{}stop();document.querySelectorAll('#choices button,#results button,#skip').forEach(b=>b.disabled=true);await action('guess',{id,round:state.round,stage:state.stage});if(state?.mode==='race'&&state?.phase==='playing'){searchSeq++;$('#search').value='';$('#results').innerHTML='';}submitting=false;if(state?.phase==='playing'&&!state.submitted)document.querySelectorAll('#choices button,#results button,#skip').forEach(b=>b.disabled=false)}
@@ -135,6 +142,8 @@ $('#search').oninput=()=>{
 };
 
 function raceLabel(){return state&&state.mode==='race'?'VIDEO RACE':state.mode==='choice'?'PICK THE SONG':state.mode==='hits'?'HOTTEST HITS':state.mode==='party'?'PARTY MODE':'NAME THE SONG'}
+const RACE_VIDEO_INTRO_FRACTION=.12;
+function raceIntroComplete(started,mediaTime,duration,isVideo){return Boolean(started&&isVideo&&Number.isFinite(duration)&&duration>0&&Number.isFinite(mediaTime)&&mediaTime>=duration*RACE_VIDEO_INTRO_FRACTION)}
 let raceKey='',raceObjectURL='',raceLoading=false;
 function renderRaceVideo(){
  let box=$('#race-video');
@@ -144,11 +153,13 @@ function renderRaceVideo(){
  }
  if(!box){box=document.createElement('div');box.id='race-video';$('.player').appendChild(box)}
  const key=state.audio;
- if(raceKey!==key){box.querySelector('video')?.pause();if(raceObjectURL)URL.revokeObjectURL(raceObjectURL);raceObjectURL='';raceKey=key;raceLoading=false;box.innerHTML='<p class="race-message">Preparing full-length video or audio… No guessing time is running.</p><button class="race-start" hidden>Start playback</button><button class="race-skip">Skip song</button><video playsinline preload="auto" style="width:100%;max-height:420px"></video>';
+ if(raceKey!==key){box.querySelector('video')?.pause();if(raceObjectURL)URL.revokeObjectURL(raceObjectURL);raceObjectURL='';raceKey=key;raceLoading=false;box.innerHTML='<p class="race-message">Preparing full-length video or audio… No guessing time is running.</p><button class="race-start" hidden>Start playback</button><button class="race-skip">Skip song</button><div class="race-media-view"><video playsinline preload="auto" style="width:100%;max-height:420px"></video><div class="race-intro-cover"><span>♪</span><strong>Listen closely</strong><small>Video fades in after the intro</small></div></div>';
  box.querySelector('.race-skip').onclick=()=>action('race-skip',{round:state.round});
  box.querySelector('.race-start').onclick=async()=>{if(state.race_status==='error'){await action('race-retry',{round:state.round});return}const v=box.querySelector('video');try{await v.play()}catch{box.querySelector('.race-message').textContent='Press Start playback once media has loaded.'}};
  }
  const v=box.querySelector('video');v.volume=Number($('#volume').value);
+ const updateIntro=()=>{const isVideo=(state?.race_type||'').startsWith('video/');const ready=raceIntroComplete(state?.race_started,v.currentTime,Number(state?.race_duration),isVideo);box.classList.toggle('race-intro-complete',ready);box.querySelector('.race-intro-cover small').textContent=state?.race_type&&!isVideo?'Full-length audio':'Video fades in after the intro'};
+ v.ontimeupdate=updateIntro;v.onseeked=updateIntro;updateIntro();
  const message=box.querySelector('.race-message');
  if(state.race_status==='error'){message.textContent=state.race_error;box.querySelector('.race-start').hidden=false;box.querySelector('.race-start').textContent='Retry media';return}
  if(state.race_url&&!raceLoading&&!raceObjectURL){
@@ -163,7 +174,7 @@ function renderRaceVideo(){
  }
  if(state.race_started&&raceObjectURL){const delay=state.race_started-state.serverTime;
   if(delay>0)message.textContent='Everyone ready. Starting…';
-  else {const points=Math.max(1,20-Math.floor(20*Math.max(0,state.elapsed||0)/state.race_duration));message.textContent=Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds remaining · '+points+' points available';if(v.paused){v.currentTime=Math.min(state.elapsed||0,v.duration||0);v.play().catch(()=>{box.querySelector('.race-start').hidden=false;message.textContent='Press Start playback to resume sound.'})}}
+  else {const points=Math.max(1,20-Math.floor(20*Math.max(0,state.elapsed||0)/state.race_duration));message.textContent=Math.max(0,Math.ceil(state.deadline-state.serverTime))+' seconds remaining · '+points+' points available';if(v.paused){v.currentTime=Math.min(state.elapsed||0,v.duration||0);updateIntro();v.play().catch(()=>{box.querySelector('.race-start').hidden=false;message.textContent='Press Start playback to resume sound.'})}}
  }
 }
 const inviteCode=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();

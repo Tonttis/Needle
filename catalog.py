@@ -2,6 +2,7 @@
 Region means artist scene/origin, language is a predominant-language editorial hint.
 """
 import random, re, unicodedata
+from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor,as_completed
 
 def norm(s):
@@ -188,6 +189,22 @@ def discovery_order(seeds):
 def artist_key(t):
     return str(t.get('artist_id') or norm(t['artist']))
 
+@lru_cache(maxsize=32768)
+def history_identity(artist,title):
+    artist=norm(artist);title=song_key(title)
+    return 'song:'+artist+'|'+title if artist and title else ''
+
+def song_history_keys(t):
+    # Provider ID plus artist/title identity catches common duplicate releases.
+    identity=history_identity(str(t.get('seed_artist') or t.get('artist') or ''),str(t.get('title') or ''))
+    keys={str(t.get('id',''))}
+    if identity:keys.add(identity)
+    return keys
+
+def song_was_played(t,seen):
+    if str(t.get('id','')) in seen:return True
+    return history_identity(str(t.get('seed_artist') or t.get('artist') or ''),str(t.get('title') or '')) in seen
+
 def choose_song(r):
     playable=[t for t in r['pool'] if 'recognition' not in t or in_difficulty(t,r.get('difficulty','Medium'))]
     if r.get('mode')=='hits':playable=[t for t in playable if not t.get('playlist_track') or t.get('hot_hit')]
@@ -199,19 +216,38 @@ def choose_song(r):
     avoid_artists=set(r.get('previous_artists',[]))
     avoid_songs=set(r.get('previous_songs',[]))
     candidates=[t for t in playable if t['id'] not in r['used']]
+    seen=r.get('_played_song_ids',set())
+    def preserves_unheard(before,after):
+        if not seen:return True
+        return not any(not song_was_played(t,seen) for t in before) or any(not song_was_played(t,seen) for t in after)
     if avoid_songs or avoid_artists:
         fresh=[t for t in candidates if t['id'] not in avoid_songs and artist_key(t) not in avoid_artists]
-        if len({artist_key(t) for t in fresh})>=4:candidates=fresh
+        if len({artist_key(t) for t in fresh})>=4 and preserves_unheard(candidates,fresh):candidates=fresh
     if not candidates:r['used']=[];candidates=[t for t in playable if t['id'] not in avoid_songs] or playable[:]
     history=r.setdefault('artist_counts',{})
     country_counts=r.setdefault('country_counts',{})
+    language_counts=r.setdefault('language_counts',{})
     if r.get('region')=='Europe':
         limit=max(1,(r.get('rounds',10)+9)//10)
         if country_counts.get('FI',0)>=limit:
-            candidates=[t for t in candidates if t.get('country')!='FI']
-            if not candidates:
-                candidates=[t for t in playable if t.get('country')!='FI']
-            if not candidates:raise ValueError('Europe needs available non-Finnish artists. Create a new mix.')
+            non_finnish=[t for t in candidates if t.get('country')!='FI']
+            if non_finnish and preserves_unheard(candidates,non_finnish):candidates=non_finnish
+    # Broad audience mixes should not be dominated by any one language lane.
+    # Metadata describes an artist's predominant language, not each lyric.
+    # Limits yield when the remaining catalog is too narrow to comply.
+    if r.get('region') in ('Europe','Worldwide') and r.get('genre','Mixed')=='Mixed' and not r.get('playlist_report'):
+        rounds=max(1,r.get('rounds',10)); each=max(1,(rounds+4)//5); combined=max(1,(rounds*3+9)//10)
+        limited={'Spanish','French'}
+        lane_total=sum(language_counts.get(lang,0) for lang in limited)
+        balanced=[t for t in candidates if t.get('language') not in limited or (language_counts.get(t.get('language'),0)<each and lane_total<combined)]
+        if balanced and preserves_unheard(candidates,balanced):candidates=balanced
+    # At most a 10% chance of choosing a previously heard song while there is
+    # an unseen eligible song. If all eligible songs were heard, allow repeats.
+    if seen:
+        fresh=[t for t in candidates if not song_was_played(t,seen)]
+        repeats=[t for t in candidates if song_was_played(t,seen)]
+        if fresh and repeats:candidates=repeats if random.random()<.10 else fresh
+        elif fresh:candidates=fresh
     # Only least-used eligible artists can be drawn, regardless of track count.
     least=min(history.get(artist_key(t),0) for t in candidates)
     candidates=[t for t in candidates if history.get(artist_key(t),0)==least]
@@ -221,12 +257,20 @@ def choose_song(r):
     for track in candidates:by_artist.setdefault(artist_key(track),[]).append(track)
     recent=r.get('recent_artists',[])
     artists=sorted(a for a in by_artist if a not in recent[-3:]) or sorted(by_artist)
-    weights=[1/(1+country_counts.get(by_artist[a][0].get('country','?'),0)*.35) for a in artists]
+    def artist_weight(a):
+        country=by_artist[a][0].get('country','?')
+        weight=1/(1+country_counts.get(country,0)*.35)
+        # A modest audience preference, only for broad Europe mixes. This is
+        # not a chart-derived quota and never overrides song difficulty.
+        if r.get('region')=='Europe' and r.get('genre','Mixed')=='Mixed' and not r.get('playlist_report') and country in {'FI','SE','NO','DK','IS'}:weight*=1.5
+        return weight
+    weights=[artist_weight(a) for a in artists]
     artist=random.choices(artists,weights=weights,k=1)[0]
     tracks=by_artist[artist]
     song=random.choice(tracks)
     country=song.get('country','?')
     history[artist]=history.get(artist,0)+1;country_counts[country]=country_counts.get(country,0)+1
+    language=song.get('language','Unknown');language_counts[language]=language_counts.get(language,0)+1
     r.setdefault('recent_artists',[]).append(artist)
     return song
 
