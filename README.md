@@ -62,7 +62,3 @@ python -m unittest -q
 node test_audio_ui.cjs
 node test_mix_ui.cjs
 ```
-
-All 50 Python tests and both JavaScript checks passed. The filter controller was tested in a simulated DOM; a local browser run was blocked because the browser binary could not be downloaded. The suite covers scoring, multiplayer game/lobby lifecycle, search, contributor enrichment, catalogue/preview caching, audio failure recovery and non-blocking latency. V7 adds explicit unknown-song rejection for Easy, regional recognition, genre standards, country/genre configuration, difficulty boundaries, familiarity-matched distractors and preservation of the full search catalogue.
-
-Selection simulations include 1,000 Europe games against a deliberately Finnish-heavy fixture and 500 Europe Easy games using the recognition anchors across both game modes. These verify artist rotation, Finland caps and Easy admission; they do not measure human recognition. Provider access here returned a Site Unavailable HTML response, so fresh live song resolution/playback is not verified in this environment.
