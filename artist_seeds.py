@@ -77,8 +77,32 @@ GROUPS = [
 ('BR','Portuguese','Pop','Anitta|Luísa Sonza|Ludmilla|IZA|Pabllo Vittar'),
 ('KR','Korean','Pop','BTS|BLACKPINK|TWICE|Stray Kids|SEVENTEEN|NewJeans|IVE|aespa'),
 ('JP','Japanese','Pop','YOASOBI|Ado|Hikaru Utada|Kenshi Yonezu|LiSA'),
+('US','English','Rock','Chubby Checker|The Monkees|Simon & Garfunkel|Jackson 5|Neil Diamond|Blondie|Joan Jett & The Blackhearts|Survivor|Goo Goo Dolls|Smash Mouth|Santana|Fun.|House of Pain'),
+('US','English','Pop','Tina Turner|Cher|Mariah Carey|Boyz II Men|Toni Braxton|Destiny\'s Child|*NSYNC|Christina Aguilera|Jennifer Lopez|Meghan Trainor|Charlie Puth|Halsey|Robin Thicke|Pharrell Williams|Lil Nas X|Lizzo|Jack Harlow|Doja Cat|Juice WRLD|James Arthur|Tom Odell|Pitbull|Marshmello|Major Lazer|Baha Men|Wiz Khalifa|Chic|Donna Summer|Village People|Kim Carnes|Lionel Richie|John Lennon'),
+('US','English','R&B','Lionel Richie|Mariah Carey'),
+('US','English','Rap / Hip Hop','Wiz Khalifa|Lil Nas X|Jack Harlow|House of Pain|Pitbull'),
+('US','English','Dance','Donna Summer|Village People|Marshmello|Major Lazer'),
+('GB','English','Pop','Bee Gees|Dexys Midnight Runners|Wham!|Lightning Seeds|Gerry and the Pacemakers|The Proclaimers|Savage Garden|Gotye|John Lennon|Mark Ronson|Tom Odell|James Arthur'),
+('GB','English','Rock','Blondie|John Lennon|The Proclaimers'),
+('AU','English','Pop','Savage Garden|Gotye'),
+('CA','English','Rock','Alanis Morissette'),
+('DE','English','Dance','Snap!|Culture Beat|Haddaway|Real McCoy|La Bouche|Mr. President|Sash!|Lou Bega'),
+('DE','German','Pop','Lou Bega'),
+('NL','English','Dance','Alice Deejay|2 Unlimited'),
+('IT','English','Dance','Corona|Robert Miles|Gala'),
+('IT','Italian','Dance','Gala'),
+('DK','English','Dance','Whigfield'),
+('SE','English','Dance','Dr. Alban|Rednex|Loreen'),
+('SE','English','Pop','Loreen'),
+('FR','English','Dance','DJ Snake'),
+('ES','Spanish','Pop','Los del Rio'),
+('MD','Romanian','Dance','O-Zone'),
+('MD','Romanian','Pop','Dan Balan|Carla\u2019s Dreams'),
+('MD','Romanian','Rock','Zdob \u0219i Zdub'),
+('IS','English','Pop','Bj\u00f6rk|Of Monsters and Men'),
+('IS','English','Rock','Kaleo|Sigur R\u00f3s'),
 ]
-EUROPE={'GB','IE','SE','NO','DK','DE','FR','BE','NL','IT','ES','PT','PL','AT','CH','FI'}
+EUROPE={'GB','IE','SE','NO','DK','DE','FR','BE','NL','IT','ES','PT','PL','AT','CH','FI','MD','IS'}
 NORTH_AMERICA={'US','CA','MX','PR'}
 # Corrections for intentionally broad initial groups / multilingual performers.
 OVERRIDES={

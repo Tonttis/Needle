@@ -17,17 +17,20 @@ class CatalogTests(unittest.TestCase):
  def test_difficulty(self):
   rows=[dict(recognition=x) for x in [94,78,65,48,32,16]]
   self.assertEqual([t['recognition'] for t in c.band(rows,'Easy')],[94])
-  self.assertEqual([t['recognition'] for t in c.band(rows,'Hard')],[78,65,48])
+  self.assertEqual([t['recognition'] for t in c.band(rows,'Medium')],[78,65])
+  self.assertEqual([t['recognition'] for t in c.band(rows,'Hard')],[48])
+  self.assertEqual([t['recognition'] for t in c.band(rows,'Expert')],[32])
+  self.assertEqual([t['recognition'] for t in c.band(rows,'Impossible')],[16])
  def test_normalization(self):
   self.assertEqual(c.norm('KÄÄRIJÄ'),c.norm('kaarija'))
   self.assertEqual(c.title_key(dict(title='Song (2011 Remastered)',artist='Queen')),c.title_key(dict(title='Song',artist='Queen')))
  def test_pool_filters_deduplicates(self):
-  seeds=[dict(name='Artist '+str(i),genre='Rock',region='Finland',language='Finnish') for i in range(8)]
+  seeds=[dict(name='Artist '+str(i),genre='Rock',region='Finland',language='Finnish',country='FI') for i in range(8)]
   def fetch(path):
    if path.startswith('search/artist'):
     from urllib.parse import unquote
     name=unquote(path.split('q=')[1]);return {'data':[{'id':int(name.split()[-1]),'name':name}]}
-   aid=int(path.split('/')[1]);return {'data':[dict(id=aid*100+i,title='Song '+str(i),artist={'id':aid,'name':'Artist '+str(aid)},preview='https://example.test',rank=100-i) for i in range(50)]}
+   aid=int(path.split('/')[1]);return {'data':[dict(id=aid*100+i,title='Song '+str(i),artist={'id':aid,'name':'Artist '+str(aid)},preview='https://example.test',rank=900000-i*1000) for i in range(50)]}
   def clean(t):return dict(id=str(t['id']),title=t['title'],artist=t['artist']['name'])
   with patch.object(c,'SEEDS',seeds):
    rows=c.build_pool(fetch,clean,'Rock','Finland','Hard');self.assertEqual(len(rows),400)

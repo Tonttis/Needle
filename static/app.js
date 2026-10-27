@@ -56,11 +56,11 @@ function renderFinal(){
  $('#match-summary').textContent=state.rounds+' songs · '+state.region+' · '+state.genre+' · '+state.difficulty;
  let rank=0,lastScore=null;
  $('#final-scores').innerHTML=players.map((p,i)=>{if(p.score!==lastScore)rank=i+1;lastScore=p.score;return '<li class="'+(p.score===best&&best>0?'top-score':'')+'"><span class="rank">'+rank+'</span><span class="final-name">'+esc(p.name)+(p.me?'<small>You</small>':'')+'</span><strong>'+p.score+'<small>POINTS</small></strong></li>'}).join('');
- $('#return-lobby').hidden=!state.host;$('#host-wait').textContent=state.host?'Start another match with the same room and players.':'Waiting for the host to return everyone to the lobby.';
+  $('#return-lobby').hidden=!state.host||!state.multi;$('#finish-home').hidden=false;$('#host-wait').textContent=!state.multi?'Solo run finished. Head home to start a new mix.':state.host?'Start another match with the same room and players.':'Waiting for the host to return everyone to the lobby.';
 }
 
 let warmTimer,mixConfig;
-const difficultyHelp={Easy:'Recognisable hits only. Obscure tracks never fill an Easy pool.',Medium:'Known hits plus popular favourites.',Hard:'Less obvious singles and catalogue favourites.',Expert:'Album cuts and less familiar songs.',Impossible:'The deeper end of the available catalogue.'};
+const difficultyHelp={Easy:'Recognisable hits only. Europe Easy favours cross-border anthems. Obscure tracks never fill an Easy pool.',Medium:'Known hits plus strong catalogue favourites. Worldwide and Europe Medium include crossover hits.',Hard:'Mid-catalogue singles and fan favourites. No Easy anthems here.',Expert:'Album cuts and deeper catalogue. For collectors.',Impossible:'The deepest end of the available catalogue. Expect obscurity.'};
 function syncMix(){
  if(!mixConfig)return;
  ['#genre','#region','#difficulty'].forEach(id=>$(id).parentElement.hidden=mode==='hits');

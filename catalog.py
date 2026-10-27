@@ -38,11 +38,11 @@ for seed in SEEDS:
 from artist_seeds import GROUPS, OVERRIDES, region_for
 _COUNTRIES={
  'ABBA':'SE','Avicii':'SE','Swedish House Mafia':'SE','Ghost':'SE','Volbeat':'DK',
- 'David Guetta':'FR','Daft Punk':'FR','U2':'IE','Enya':'IE',
+ 'David Guetta':'FR','Daft Punk':'FR','U2':'IE','Enya':'IE','DJ Snake':'FR',
  'Rammstein':'DE','Eisbrecher':'DE','Oomph!':'DE','Megaherz':'DE',
  'Stromae':'BE','Angèle':'BE','Indila':'FR','Zaz':'FR','Louane':'FR','Clara Luciani':'FR',
  'Enrique Iglesias':'ES','Rosalía':'ES','Álvaro Soler':'ES','Aitana':'ES',
- 'Drake':'CA','The Weeknd':'CA','Nicki Minaj':'US',
+ 'Drake':'CA','The Weeknd':'CA','Nicki Minaj':'US','Mariah Carey':'US','O-Zone':'MD','Loreen':'SE','Dr. Alban':'SE','Rednex':'SE','Björk':'IS','Of Monsters and Men':'IS','Kaleo':'IS','Sigur Rós':'IS','Dan Balan':'MD',"Carla's Dreams":'MD','Zdob și Zdub':'MD','Cher':'US','2 Unlimited':'NL','Corona':'IT','Robert Miles':'IT','Gala':'IT','Whigfield':'DK','Los del Rio':'ES','Pitbull':'US','Wiz Khalifa':'US','Alanis Morissette':'CA','Lil Nas X':'US','Doja Cat':'US','Juice WRLD':'US','Halsey':'US','Charlie Puth':'US','Marshmello':'US','Major Lazer':'US','Gotye':'AU','Savage Garden':'AU','Christina Aguilera':'US','Jennifer Lopez':'US','Destiny\'s Child':'US','James Arthur':'GB','Tom Odell':'GB','Robin Thicke':'US','Pharrell Williams':'US','Lizzo':'US','Jack Harlow':'US','Meghan Trainor':'US','Goo Goo Dolls':'US','Smash Mouth':'US','Santana':'US','Toni Braxton':'US','Boyz II Men':'US','Chubby Checker':'US','The Monkees':'US','Simon & Garfunkel':'US','Jackson 5':'US','Neil Diamond':'US','Joan Jett & The Blackhearts':'US','Survivor':'US','Kim Carnes':'US','Dexys Midnight Runners':'GB','Baha Men':'US','Fun.':'US','House of Pain':'US',
 }
 for seed in SEEDS:
     seed['country']=_COUNTRIES.get(seed['name'],'FI' if seed['region']=='Finland' else 'GB' if seed['region']=='Europe' else 'US')
