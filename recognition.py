@@ -2,7 +2,7 @@
 Popularity ranks are only a secondary signal, never proof that a song is Easy.
 """
 import pathlib,re,unicodedata
-VERSION='v9-hits-2'
+VERSION='v9-depth-3'
 COUNTRIES={'Finland':'FI','United Kingdom':'GB','Ireland':'IE','Sweden':'SE','Norway':'NO','Denmark':'DK','Germany':'DE','France':'FR','Belgium':'BE','Netherlands':'NL','Italy':'IT','Spain':'ES','Portugal':'PT','Poland':'PL','Austria':'AT','Switzerland':'CH','Moldova':'MD','Iceland':'IS','United States':'US','Canada':'CA','Australia':'AU','New Zealand':'NZ','Brazil':'BR','Colombia':'CO','Puerto Rico':'PR','South Korea':'KR','Japan':'JP','Jamaica':'JM','Nigeria':'NG','South Africa':'ZA'}
 AREAS={'Nordics':{'FI','SE','NO','DK','IS'},'Latin America':{'BR','CO','PR','MX','AR','CL','CU','DO'},'Asia':{'JP','KR','IN','TH','PH'},'Africa':{'NG','ZA','GH','CM','KE'},'Oceania':{'AU','NZ'}}
 def text_key(value):
@@ -56,11 +56,12 @@ def classify_tracks(tracks,seed,region,genre):
      score=known
    else:
      # Local-only titles out of scope never get promoted by provider rank.
+     # Deeper catalogue (positions 30+) feeds Expert/Impossible tails.
      p=profile(seed)
      if p and p['reach']=='local':
        score=16
      else:
-       score=(68 if position<3 and rank>=400_000 else 60 if position<8 and rank>=150_000 else 48 if position<15 and rank>=80_000 else 32 if position<30 and rank>=20_000 else 16)
+       score=(68 if position<3 and rank>=400_000 else 60 if position<8 and rank>=150_000 else 48 if position<15 and rank>=80_000 else 32 if position<45 and rank>=20_000 else 16)
    t.update(hot_hit=is_hot_hit(seed['name'],t['title']),recognition=score,recognition_source=profile(seed)['evidence'] if known else 'provider-relative',seed_artist=seed['name'],artist_position=position)
   return tracks
 

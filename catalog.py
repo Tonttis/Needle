@@ -116,7 +116,15 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
             results=fetch('search/artist?limit=10&q='+__import__('urllib.parse',fromlist=['quote']).quote(seed['name'])).get('data',[])
             artist=next((a for a in results if norm(a['name'])==norm(seed['name'])),None)
             if not artist:return []
-            rows=fetch(f"artist/{artist['id']}/top?limit=50").get('data',[])
+            rows=fetch(f"artist/{artist['id']}/top?limit=100").get('data',[])
+            # Harder tiers go one page deeper: top index 50 mostly holds album
+            # cuts and older singles the first 50 miss.
+            if difficulty in ('Hard','Expert','Impossible','Hits'):
+                try:
+                    extra=fetch(f"artist/{artist['id']}/top?limit=50&index=50").get('data',[])
+                    seen={str(t.get('id')) for t in rows}
+                    rows=list(rows)+[t for t in extra if str(t.get('id')) not in seen]
+                except (ValueError,KeyError):pass
             dedup={}
             for raw in rows:
                 if not raw.get('preview') or str(raw['artist']['id'])!=str(artist['id']): continue
