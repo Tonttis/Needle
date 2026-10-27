@@ -15,15 +15,15 @@ rooms={}; lock=threading.RLock(); cache={}
 request_lock=threading.Lock()
 last_request=0.0
 
-def _fetch(path):
+def _fetch(path, fresh=False):
     global last_request
     now=time.time()
-    if path in cache and now-cache[path][0]<86400:return cache[path][1]
+    if not fresh and path in cache and now-cache[path][0]<86400:return cache[path][1]
     # Metadata only. Persistent cache survives container rebuilds via /app/data.
     with sqlite3.connect(DATA/'catalog-cache.sqlite',timeout=20) as db:
         db.execute('CREATE TABLE IF NOT EXISTS responses (path TEXT PRIMARY KEY, saved REAL, body TEXT)')
         row=db.execute('SELECT saved,body FROM responses WHERE path=?',(path,)).fetchone()
-    if row and now-row[0]<86400:
+    if not fresh and row and now-row[0]<86400:
         value=json.loads(row[1]);cache[path]=(row[0],value);return value
     try:
         with request_lock:
@@ -34,7 +34,7 @@ def _fetch(path):
         with urllib.request.urlopen(request,timeout=12) as response:value=json.load(response)
         if not isinstance(value,dict) or 'error' in value:raise ValueError('Music provider unavailable')
     except Exception as error:
-        if row and now-row[0]<7*86400:return json.loads(row[1])
+        if not fresh and row and now-row[0]<7*86400:return json.loads(row[1])
         raise ValueError('Music catalog could not be reached. Check server internet access and try again.') from error
     cache[path]=(now,value)
     with sqlite3.connect(DATA/'catalog-cache.sqlite',timeout=20) as db:
@@ -42,9 +42,9 @@ def _fetch(path):
     return value
 metadata_locks={}
 metadata_guard=threading.Lock()
-def fetch(path):
+def fetch(path, fresh=False):
     with metadata_guard:mutex=metadata_locks.setdefault(path,threading.Lock())
-    with mutex:return _fetch(path)
+    with mutex:return _fetch(path,fresh)
 def clean(t):
     names=list(dict.fromkeys(a['name'] for a in [t['artist']]+t.get('contributors',[]) if a.get('name')))
     return {'id':str(t['id']),'title':t['title'],'artist':', '.join(names),'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link','')}
@@ -148,8 +148,29 @@ def load_audio(song):
                 subprocess.run(['yt-dlp','--no-playlist','--max-filesize','30M','--download-sections','*0-20','-x','--audio-format','mp3','-o',str(DATA/(song['id']+'.%(ext)s')),'ytsearch1:'+song['artist']+' '+song['title']+' official audio'],check=True,timeout=100,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         b=target.read_bytes(); typ='audio/mpeg'
     else:
-        with urllib.request.urlopen(song['preview'],timeout=20) as a: b=a.read(5_000_000); typ=a.headers.get('Content-Type','audio/mpeg')
+        try:
+            return read_preview(song.get('preview',''))
+        except Exception:
+            # Stored catalog URLs can expire before the catalog itself does.
+            # Refresh the exact track, bypassing both metadata caches.
+            try:
+                detail=fetch('track/'+song['id'],fresh=True)
+                return read_preview(detail.get('preview',''))
+            except Exception as error:
+                raise ValueError('This track preview is unavailable from the music provider. Retry playback or skip this track.') from error
     return b,typ
+
+def read_preview(url):
+    if not url or urllib.parse.urlparse(url).scheme not in ('https','http'):
+        raise ValueError('Track has no preview URL')
+    request=urllib.request.Request(url,headers={'User-Agent':'Needle/6.1','Accept':'audio/*'})
+    with urllib.request.urlopen(request,timeout=20) as response:
+        content=response.headers.get('Content-Type','audio/mpeg').split(';')[0].lower()
+        data=response.read(5_000_001)
+        if not data or len(data)>5_000_000 or content in ('text/html','application/json','text/plain'):
+            raise ValueError('Music provider returned an invalid audio preview')
+        return data,content
+
 audio_cache=AudioCache(load_audio)
 class Handler(BaseHTTPRequestHandler):
     protocol_version="HTTP/1.1"

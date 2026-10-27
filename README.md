@@ -1,4 +1,4 @@
-# Needle V6
+# Needle V6.1
 Private music guessing with two modes, genre/scene/familiarity filters, animated vinyl, audio-reactive particles, and multiplayer rooms.
 
 ## Install or upgrade
@@ -62,7 +62,7 @@ Run:
 python -m unittest -v
 ```
 
-29 tests cover caching, latency, matching, contributors, scoring, timeouts, discovery filtering and anti-repeat selection. A deterministic test runs 1,000 complete ten-song Europe matches against intentionally Finnish-heavy fixture data: each had ten different artists and countries and at most one Finnish track. Finnish sequences of 3, 10, 20 and 30 songs verify artist rotation and no consecutive repeat. A partial-provider-failure test verifies a two-artist result is rejected.
+33 tests cover audio recovery, caching, latency, matching, contributors, scoring, timeouts, discovery filtering and anti-repeat selection. A deterministic test runs 1,000 complete ten-song Europe matches against intentionally Finnish-heavy fixture data: each had ten different artists and countries and at most one Finnish track. Finnish sequences of 3, 10, 20 and 30 songs verify artist rotation and no consecutive repeat. A partial-provider-failure test verifies a two-artist result is rejected.
 
 HTTP integration tests run actual two-player, ten-round games in both modes through creation, joining, guessing, scoring, final results, returning to the lobby and restarting. Catalog data is mocked for these tests.
 
@@ -91,3 +91,8 @@ Controlled local latency regression tests deliberately delay contributor lookups
 V6 also renders mutation responses immediately and ignores polls begun before a newer action, preventing stale state from delaying Next or leaving a rejected guess disabled. The browser favicon is supplied in seven ICO sizes (16–256 px), SVG and 180 px Apple touch format. No runtime icon-generation dependency is needed.
 
 Live V5 testing at the supplied deployment reproduced a slow startup (935 songs / 68 artists loaded) and search waiting until a stage transition. V6 has been tested locally, not deployed to that server. The full-catalog cache test verifies unchanged track counts, shared jobs and disk-cache reuse after clearing memory.
+
+## V6.1 audio fixes
+The game volume slider now changes the active Web Audio gain immediately (including mute), and remembers its setting. Failed previews trigger one fresh metadata lookup for the same track, bypassing cached preview URLs. Empty or HTML provider responses are rejected, and failed browser downloads/decodes are evicted so Retry can fetch again. The UI displays the server error instead of hiding all failures behind one generic message. This does not guarantee playback when the upstream provider has removed or blocked a preview, or when YouTube extraction fails.
+
+Run `python -m unittest -q` and `node test_audio_ui.cjs` for backend tests and the simulated active-playback volume/mute regression. Deploy the complete package and rebuild; the header shows V6.1.

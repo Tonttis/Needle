@@ -1,0 +1,11 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const code=fs.readFileSync('static/app.js','utf8');
+const elements=new Map();const $=id=>{if(!elements.has(id))elements.set(id,{value:'.7',textContent:'▶'});return elements.get(id)};
+let liveVolume,downloads=0;
+const gain={gain:{setValueAtTime:v=>liveVolume=v,setTargetAtTime:v=>liveVolume=v},connect(){},disconnect(){}};
+const ctx={currentTime:0,resume:async()=>{},decodeAudioData:async()=>({duration:30}),createGain:()=>gain,createBufferSource:()=>({connect(){},start(){},stop(){}}),createAnalyser:()=>({connect(){},disconnect(){},frequencyBinCount:64})};
+const scope={$,ctx,localStorage:{getItem:()=>null,setItem(){}},fetch:async()=>{downloads++;return {ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}},state:{audio:'/audio/test',phase:'playing',seconds:15},playGeneration:0,source:null,buffer:null,audioUrl:'',analyser:null,frequency:null,playbackGain:null,Uint8Array,document:{body:{classList:{add(){},remove(){}}}},window:{dispatchEvent(){}},CustomEvent:class{},stop(){scope.source=null},error:e=>{throw e}};
+vm.createContext(scope);
+vm.runInContext(code.slice(code.indexOf('const audioDownloads'),code.indexOf('async function api')),scope);
+vm.runInContext(code.slice(code.indexOf("$('#play').onclick="),code.indexOf('async function refresh')),scope);
+(async()=>{await $('#play').onclick();assert.equal(liveVolume,.7);$('#volume').value='0';$('#volume').oninput();assert.equal(liveVolume,0);$('#volume').value='.25';$('#volume').oninput();assert.equal(liveVolume,.25);assert.equal(downloads,1);console.log('Live playback volume and mute: passed');scope.fetch=async()=>({ok:false,json:async()=>({error:'Provider preview unavailable'})});await assert.rejects(vm.runInContext("downloadAudio('/audio/failure')",scope),/Provider preview unavailable/);scope.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});assert.equal((await vm.runInContext("downloadAudio('/audio/failure')",scope)).byteLength,8);console.log('Failed download eviction, retry and error detail: passed')})().catch(e=>{console.error(e);process.exitCode=1});
