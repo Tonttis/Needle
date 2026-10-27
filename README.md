@@ -1,127 +1,59 @@
-# Needle V8
+# Needle
 
-A private three-mode music guessing game with solo play, online rooms, animated records, reactive particles and audio analysers. This release rebuilds song recognition and scene selection. See [CATALOG_RESEARCH.md](CATALOG_RESEARCH.md) for sources, rules and limitations.
+A private music guessing game with solo play, online multiplayer rooms, and a video race. Features animated records, reactive particles, and audio analysers.
 
-## Deploy
+## Running it
+
+**Docker (recommended):**
 
 ```sh
 docker compose up -d --build
 ```
 
-Open http://localhost:3000 or your server's address. In Coolify, commit/copy the **complete package** into the application repository and rebuild/redeploy the Compose service. Preserve `.env` and `data/`. The header must show **V8**. This ZIP does not update GitHub or the live server automatically.
+Open http://localhost:3000
 
-New required files include `recognition.py` and `recognition_data.tsv`; retain `audio_cache.py`. Docker copies them automatically. V7 ignores old pool selection files while reusing metadata/audio caches. A cold mix may still take time to build; Start waits up to 20 seconds and preserves the background job if it needs a retry. Selecting filters preloads the mix.
+**Local (preview mode only, no extra packages needed):**
 
-## Music selection
-
-- 863 artist discovery anchors; 930 named-song calibration entries across 389 artists. Counts describe source metadata, not guaranteed playable provider tracks.
-- 18 genres plus Mixed: Pop, Rock, Metal, Rap / Hip Hop, Dance, Electronic, R&B, Indie / Alternative, Punk / Pop Punk, Soul / Funk, Country, Jazz, Blues, Reggae, Latin, K-pop, J-pop and Afrobeats.
-- 28 country scenes, plus Worldwide, Europe, North America, Nordics, Latin America, Asia, Africa and Oceania.
-- **Europe is an audience-oriented mix**, including international crossover artists. Specific countries focus on their local artists. Neither follows your IP location.
-- Easy requires a calibrated recognisable song. Medium adds popular favourites. Hard excludes Easy anchors. Expert and Impossible draw progressively deeper from the provider's available artist top 50. `Normal` remains a backwards-compatible alias for Medium.
-- Least-used artists are selected before repeats. Europe caps Finland at one answer per ten rounds (rounded up), with soft country balancing rather than forced country rotation.
-- Both game modes use the same difficulty rules. Choice distractors prefer similar familiarity and language. Guess search appears only after two characters, changes with the query, and shows at most 25 matches.
-- Full fetched tracks remain available for search and distractors. Insufficient coverage produces a clear error rather than silently adding obscure Easy tracks. Unsupported combinations are greyed out before starting.
-
-Calibration is editorial and informed by charts/streaming/radio sources; it cannot guarantee familiarity for every listener. The Easy anchor list is maintained in the source; metadata, previews and broader catalogue tracks are fetched automatically. Genre/language are artist-level hints and collaborations can cross categories. All contributor credits display when the provider supplies them; enrichment runs in the background.
-
-## Rules
-
-**Name the Song:** snippets of 0.1 → 0.5 → 2 → 8 → 15 seconds. Guess by selecting a search result or skip. Solo points: 5, 4, 3, 2, 1.
-
-**Pick the Song:** five seconds, four choices. Correct earns one point; wrong/skip earns zero.
-
-**Online:** 2–8 players join before the host starts. Everyone submits a hidden guess per snippet. Once all have answered or time expires, every correct player receives one point. If nobody is right, the next snippet unlocks. The host advances songs. Final results show ranked scores and ties, Home and host-controlled Back to lobby; lobby return resets scores and retains the players.
-
-First snippet: 45 seconds; later snippets: 30 seconds. The clock does not wait for every browser's audio download. Rooms/scores are in memory and disappear on server restart. Reload reconnects through sessionStorage; an absent host requires a new room. Audio reaches the browser, so this is a friendly game rather than cheat-proof tournament software.
-
-## Audio and visuals
-
-Default audio is Deezer preview audio. Optional YouTube extraction uses `.env`:
-
-```env
-AUDIO_SOURCE=youtube
+```sh
+python server.py
 ```
 
-Restart/rebuild the Compose service. Metadata still comes from Deezer. yt-dlp searches artist/title and extracts the first 20 seconds with FFmpeg; it can be blocked or select the wrong recording. Downloaded files persist in `data/`. Preview mode uses a bounded RAM audio cache, not persistent audio files.
+## Requirements
 
-The in-game volume changes active playback immediately, including mute, and is remembered. Failed preview URLs trigger a fresh lookup of that exact track. Invalid responses are rejected and failed browser downloads can retry. Provider removals/blocks can still prevent playback.
+- Python 3.12 (standard library only for preview mode)
+- Docker (installs yt-dlp, FFmpeg, Node for YouTube videos)
+- SQLite (bundled with Python)
 
-Records spin on home/game screens. Full / Calm / Off motion controls remember your choice; Full overrides OS reduced motion. Menu ambience is an opt-in original synthesised chord, with its own volume, paused during games/hidden tabs. Real Web Audio frequencies drive the visuals. The answer reveal automatically plays the preview once browser audio is unlocked; use Play if autoplay is blocked.
+## Environment (`.env`)
 
-## Implementation and performance
+```env
+# Use YouTube instead of Deezer preview audio (optional)
+AUDIO_SOURCE=youtube
 
-Python 3.12 standard library, SQLite metadata cache, vanilla JavaScript/CSS and one-second room polling. Preview mode needs no Python packages: `python server.py`. Docker installs yt-dlp, FFmpeg and Node for the optional YouTube mode.
+# Spotify playlists (optional)
+SPOTIFY_ACCESS_TOKEN=...
+# or for auto-renewal:
+SPOTIFY_CLIENT_ID=...
+SPOTIFY_CLIENT_SECRET=...
+SPOTIFY_REFRESH_TOKEN=...
+```
 
-Shared catalogue jobs and 24-hour persistent full-pool caches avoid rebuilding a mix for every player. Identical metadata/audio requests share in-flight work. Contributor enrichment never blocks search or Next. Audio RAM cache is bounded to 64 MB / 15 minutes. The browser prefetches current-round audio and keeps at most three downloads. Mutation responses render immediately and stale polls are ignored. Favicon formats: multi-size ICO, SVG and Apple touch PNG.
+Preserve `.env` and `data/` between deploys.
 
-## Validation
+## Modes
+
+- **Name the Song** — guess from snippets of 0.1 → 0.5 → 2 → 8 → 15 seconds
+- **Pick the Song** — 5-second snippet, four choices
+- **Video Race** — guess the song from a video; faster guesses score more (20–1 points)
+- **Hottest Hits** — hit-based rounds (Party mode)
+- **Party** — mix any of the above, shuffled in cycles
+
+Online rooms support 2–8 players. Rooms and scores are in memory and reset on server restart.
+
+## Tests
 
 ```sh
 python -m unittest -q
 node test_audio_ui.cjs
 node test_mix_ui.cjs
 ```
-
-All 50 Python tests and both JavaScript checks passed. The filter controller was tested in a simulated DOM; a local browser run was blocked because the browser binary could not be downloaded. The suite covers scoring, multiplayer game/lobby lifecycle, search, contributor enrichment, catalogue/preview caching, audio failure recovery and non-blocking latency. V7 adds explicit unknown-song rejection for Easy, regional recognition, genre standards, country/genre configuration, difficulty boundaries, familiarity-matched distractors and preservation of the full search catalogue.
-
-Selection simulations include 1,000 Europe games against a deliberately Finnish-heavy fixture and 500 Europe Easy games using the recognition anchors across both game modes. These verify artist rotation, Finland caps and Easy admission; they do not measure human recognition. Provider access here returned a Site Unavailable HTML response, so fresh live song resolution/playback is not verified in this environment.
-## V8.1 video readiness repair
-Built on the uploaded modified version. Video race downloads a complete 480p H.264 video with audio, falling back to full-length audio. FFprobe checks duration and the audio stream. Files are cached under data/race-media and cleaned automatically. A media file is limited to 80 MiB.
-
-Browsers fetch the complete file before playing; guessing is hidden until listeners have successfully unlocked playback. Autoplay restrictions show a Start playback button. Online rounds wait for every non-skipped player, then begin after a short shared countdown. The server uses actual media duration instead of 30 seconds. Retry/skip is available during loading errors; ordinary correct guesses still end the race. Late correct guesses earn at least one point. Home and round changes stop old playback. The video element survives state polls. Volume controls the actual player.
-
-Deploy the full package, including race_media.py, with the included Dockerfile (FFmpeg/ffprobe and yt-dlp required). Preserve .env and data/. Header: V8.1. No live deployment was performed. YouTube may block downloads or return an incorrect search result; those external conditions cannot be guaranteed. Browser/live YouTube playback could not be verified in this environment. Python regressions cover readiness, full-length timing, skip, scoring and multiplayer; JavaScript syntax was checked.
-
-## V8.2 YouTube search repair
-Corrects conflicting subprocess capture arguments that prevented every YouTube search from running. Explicitly enables the Docker-installed Node runtime for yt-dlp. Rebuild the image to update yt-dlp; the header shows V8.2. YouTube may still block the server or require authentication. Live playback was not verified here.
-
-## V8.3 playback and cache
-Race playback attempts to start automatically once downloaded; browser autoplay restrictions may require a click. The shared server starts the race after the players have unlocked playback. Cache files expire 30 days after download and least-recently-used files are removed above 2 GiB; in-use files are protected until a round ends. Cleanup runs at startup, hourly and on cache use. Temporary downloads may use extra space while in progress.
-
-The previous Spotify-preview message was incorrect: the optional reveal preview is an Apple iTunes Search preview; the Spotify link is a search link. The reveal now waits for that lookup and labels the fallback correctly. No Spotify API is configured.
-
-## V8.4 video race guesses
-Video Race allows repeated guesses. Incorrect guesses trigger a five-second per-player cooldown enforced by the server; correct guesses finish the race as before. The separate Skip song control remains available, including during cooldown. The snippet skip control is hidden in Video Race.
-
-## V8.5 race results
-Multiplayer Video Race reveals the winning player name to everyone; correct names display instead of a misleading skipped/timeout message. Scores remain unchanged.
-
-## V8.6 multiplayer results
-All multiplayer modes retain each player’s correct, incorrect or skipped result and display the names of everyone who answered correctly beneath it. Winner names are only sent after the answer is revealed.
-
-## V8.7 streamlined invitations
-An invite link opens a focused name-and-join screen showing the host, mode, mix, number of rounds and player count. Unavailable, full or started rooms show a clear message. Home removes the invitation from the address bar. The room lookup exposes only lobby details, never session tokens or the current song.
-
-## V8.8 Video Race scoring
-Correct guesses earn 20 to 1 points in 20 equal time bands across the full media duration. The first 5% earns 20, the halfway mark earns 10, and the final 5% earns 1. Skip and timeout earn 0. In multiplayer the fastest correct player receives the points. The on-screen available score updates during playback.
-
-## V8.9 mode card artwork
-The four mode cards use a responsive two-column desktop layout and a single column on small screens. Name the Song has a music illustration; Pick the Song has four stylised options; Video Race and Hottest Hits use locally bundled animated GIF backgrounds. The concert is an original generated scene with animated camera/light movement, and the flame GIF is similarly animated from original artwork. Motion: Off uses still images.
-
-## V9.0: Party, decades, recap and playlists
-
-Party mode lets the host pick any combination of Name the Song, Pick the Song, Video Race and Hottest Hits. Rounds are randomly shuffled in cycles so selected modes are represented; all scores share one scoreboard. Existing scoring remains: multiplayer snippet/choice hits earn one point, whereas Video Race awards 20–1 based on elapsed time, so video rounds have more impact. Hottest Hits requires at least four matching hit artists in the mix.
-
-Decade filters (1980s–2020s) combine with scene, genre, difficulty and Party selection. They use the album release date reported by the provider; reissues or compilations can have later dates, and tracks without dates are excluded. A cold decade mix may need many provider calls. Work runs in the background and is cached; retry Start when prompted.
-
-The final setlist shows every completed round, song, mode, correct players, elapsed seconds from the start of the round and listening links. A new lobby resets the recap.
-
-Paste a YouTube or Spotify playlist URL in the optional playlist field. Its songs replace scene/genre/familiarity selection; the decade filter is unavailable for playlists. Up to 1,000 entries are read and individually matched to Deezer tracks with playable previews. Matching can fail or find a different version; the game displays the matched/total count. A minimum of four playable matches is required. Video Race uses the original YouTube video when available; provider restrictions may prevent playback. Playlist processing is cached for 15 minutes and runs in the background; the progress panel waits for it automatically.
-
-Spotify requires user authorization: set `SPOTIFY_ACCESS_TOKEN` on the server, or for automatic renewal set `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` and `SPOTIFY_REFRESH_TOKEN` obtained through the Spotify authorization code flow. Do not commit these values. The direct token takes precedence and expires; unset it when using refresh credentials. In Spotify Development Mode, the authorized user must own or collaborate on the playlist, even if it is public. Access outside that scope depends on Spotify's app quota. A Spotify link is metadata only; Spotify audio is not downloaded. See https://developer.spotify.com/documentation/web-api/tutorials/code-flow and https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide.
-
-Deploy the entire package including `playlists.py`, and preserve `.env` and `data/`. Docker Compose passes the Spotify environment variables to the container. Live Spotify, YouTube and Deezer access was not verified from this environment; automated tests use mocked provider responses. Header: V9.0.
-
-## V9.1 mode cards
-Party and Custom Playlists are full-size mode cards. Select Custom Playlists to reveal the playlist URL and game-type fields in the setup area; switching modes retains the entered URL without using it in other modes. Playlist Party mode exposes the same round controls.
-
-## V9.2 preparation progress
-All modes show an automatic preparation panel. Playlist imports show the number of entries checked; catalogue mixes show artist discovery and, where applicable, album date checks. The bar is indeterminate when the total is unknown, and the game starts automatically after preparation. Cancel stops waiting; shared background work can continue and be reused. Custom playlist mode does not expose or apply the decade filter.
-
-## V9.3 next-video preload
-Video Race reserves the next song privately and starts fetching its video in the background. Party mode also reserves the next round and preloads it when it is a video round. The next answer is not sent as part of game state. When advancing, the game reuses the in-flight download or cached media. If it fails, normal loading/retry handles the track. Browser download, network conditions, or a fast skip can still cause a wait; preloading does not guarantee immediate playback. The 30-day / 2 GiB cache policy still applies. Recap links are labelled Deezer and Spotify.
-
-### Compact gameplay layout
-
-Gameplay uses a compact viewport layout on desktop and mobile. Search suggestions and the final setlist use Previous/Next buttons instead of scrolling; the home and setup pages remain scrollable. Extremely short windows, large browser text scaling, and an on-screen keyboard can reduce the available space further.
