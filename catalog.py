@@ -187,8 +187,17 @@ def artist_key(t):
 def choose_song(r):
     playable=[t for t in r['pool'] if 'recognition' not in t or in_difficulty(t,r.get('difficulty','Medium'))]
     if not playable:raise ValueError('No tracks meet this difficulty. Choose another mix.')
+    # Cross-game variety: avoid repeating the last game's artists/songs when
+    # the pool is large enough to allow it. Rooms hand over their tail via
+    # previous_artists/previous_songs on lobby return; solo hands it over via
+    # create payload from localStorage.
+    avoid_artists=set(r.get('previous_artists',[]))
+    avoid_songs=set(r.get('previous_songs',[]))
     candidates=[t for t in playable if t['id'] not in r['used']]
-    if not candidates:r['used']=[];candidates=playable[:]
+    if avoid_songs or avoid_artists:
+        fresh=[t for t in candidates if t['id'] not in avoid_songs and artist_key(t) not in avoid_artists]
+        if len({artist_key(t) for t in fresh})>=4:candidates=fresh
+    if not candidates:r['used']=[];candidates=[t for t in playable if t['id'] not in avoid_songs] or playable[:]
     history=r.setdefault('artist_counts',{})
     country_counts=r.setdefault('country_counts',{})
     if r.get('region')=='Europe':

@@ -49,7 +49,10 @@ def fetch(path, fresh=False):
     with mutex:return _fetch(path,fresh)
 def clean(t):
     names=list(dict.fromkeys(a['name'] for a in [t['artist']]+t.get('contributors',[]) if a.get('name')))
-    return {'id':str(t['id']),'title':t['title'],'artist':', '.join(names),'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link','')}
+    artist=', '.join(names)
+    query=urllib.parse.quote(artist+' '+t['title'])
+    return {'id':str(t['id']),'title':t['title'],'artist':artist,'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link',''),
+            'spotify_url':'https://open.spotify.com/search/'+query}
 def credit(t):
     if t.get('_credits'): return t
     try:
@@ -59,18 +62,23 @@ def credit(t):
     return t
 
 def suggestions(r,term):
-    term=norm(term)
-    if len(term)<2:return []
+    from recognition import layout_variants
+    terms=[norm(v) for v in layout_variants(term)]
+    terms=[t for t in terms if len(t)>=2]
+    if not terms:return []
     song=r['song']
     rows=[t for t in r['pool'] if t.get('genre')==song.get('genre') and t.get('language')==song.get('language')]
     scored=[]
-    words=term.split()
-    for t in rows:
+    for variant in terms:
+     words=variant.split()
+     for t in rows:
         title=norm(t['title']); artist=norm(t['artist']); text=title+' '+artist
-        score=3 if title==term or artist==term else 2 if all(w in text for w in words) else SequenceMatcher(None,term,title).ratio()
-        if score>.55:scored.append((-score,title,artist,t))
-    scored.sort(key=lambda x:x[:3])
-    return [x[3] for x in scored[:25]]
+        score=3 if title==variant or artist==variant else 2 if all(w in text for w in words) else SequenceMatcher(None,variant,title).ratio()
+        if score>.55:scored.append((-score,title,artist,t['id'],t))
+    seen={}
+    for s in sorted(scored,key=lambda x:x[:4]):
+        seen.setdefault(s[3],s)
+    return [s[4] for s in sorted(seen.values(),key=lambda x:x[:3])[:25]]
 
 catalog_workers=ThreadPoolExecutor(max_workers=2)
 credit_workers=ThreadPoolExecutor(max_workers=2)
@@ -109,6 +117,7 @@ def advance(r):
     r['song']=choose_song(r); r['used'].append(r['song']['id'])
     r['stage']=0; r['guesses']={}; r['history']=[]; r['round']+=1; r['phase']='playing'; r['deadline']=time.time()+45
     r['board'],r['options']=round_choices(r['song'],r['pool'])
+    r['history'].append({'answer':r['song']['id'],'artist':artist_key(r['song'])})
     if r.get('hydrate',False):
         for track in r['options']:queue_credit(track)
     r['audioKey']=secrets.token_urlsafe(24)
@@ -117,7 +126,8 @@ def settle(r):
     if r['phase']!='playing': return
     if len(r['guesses'])<len(r['players']) and time.time()<r['deadline']: return
     wins=[p for p,g in r['guesses'].items() if g==r['song']['id']]
-    r['history'].append({'stage':r['stage'],'correct':len(wins)})
+    if r.get('history'):r['history'][-1].update(stage=r['stage'],correct=len(wins))
+    else:r['history'].append({'answer':r['song']['id'],'artist':artist_key(r['song']),'stage':r['stage'],'correct':len(wins)})
     if wins or r['stage']==4 or r['mode']=='choice':
         for p in wins: r['players'][p]['score']+= (5-r['stage']) if not r['multi'] and r['mode']!='choice' else 1
         r['phase']='reveal'; r['winners']=wins
@@ -127,6 +137,9 @@ def settle(r):
 def state(r,p):
     settle(r)
     out={k:r[k] for k in ['code','mode','multi','phase','round','rounds','stage','deadline','genre','history']}
+    # History carries answer ids + artists so the client can de-prioritise
+    # repeats in the next game; stage/correct kept for the timeline.
+    out['history']=[dict(stage=h.get('stage',0),correct=h.get('correct',0),artist=h.get('artist'),song=h.get('answer')) for h in r.get('history',[])]
     out['players']=[dict(name=v['name'],score=v['score'],me=k==p,host=k==r['host'],submitted=k in r['guesses']) for k,v in r['players'].items()]
     if '_stats' not in r:
         playable=[t for t in r['pool'] if 'recognition' not in t or in_difficulty(t,r.get('difficulty','Medium'))]
@@ -139,7 +152,56 @@ def state(r,p):
     out['host']=p==r['host']; out['submitted']=p in r['guesses']; out['serverTime']=time.time()
     if r['phase']!='lobby': out['audio']='/audio/'+r['audioKey']; out['seconds']=5 if r['mode']=='choice' else STEPS[r['stage']]
     if r['mode']=='choice' and r['phase']=='playing': out['options']=[{k:t[k] for k in ['id','title','artist']} for t in r['options']]
-    if r['phase']=='reveal': out['answer']={k:v for k,v in r['song'].items() if k not in ['preview','_credits']}
+    if r['phase']=='reveal':
+        ans={k:v for k,v in r['song'].items() if k not in ['preview','_credits']}
+        # Spotify check: no API key needed. iTunes Search (Apple) returns a
+        # 30s best-part preview + artwork + trackViewUrl for most tracks, and
+        # doubles as the Spotify-link resolver input. Deezer stays the game
+        # audio; this is reveal-only enrichment and never blocks reveal.
+        try:ans.update(spotify_enrich(ans.get('artist',''),ans.get('title','')))
+        except Exception:pass
+        out['answer']=ans
+    return out
+
+def _itunes_search(artist,title):
+    """Direct iTunes Search API call (not via Deezer fetch cache)."""
+    q=urllib.parse.quote((artist+' '+title).strip())
+    if not q:return None
+    url='https://itunes.apple.com/search?media=music&entity=song&limit=5&term='+q
+    request=urllib.request.Request(url,headers={'Accept':'application/json','User-Agent':'Needle/5'})
+    with urllib.request.urlopen(request,timeout=10) as response:
+        return json.load(response)
+    return None
+
+def spotify_enrich(artist,title):
+    """Best-effort reveal enrichment: Spotify search link + preview audio.
+
+    Uses the public iTunes Search API (no key, JSON) to find the track, then
+    builds an open.spotify.com search URL. Returns preview_url (usually the
+    chorus/best-part 30s), artwork and spotify link. Empty dict on miss.
+    Cached in-memory + sqlite like other metadata.
+    """
+    out={}
+    q=(artist+' '+title).strip()
+    if q:out['spotify_url']='https://open.spotify.com/search/'+urllib.parse.quote(q)
+    try:
+        with request_lock:
+            delay=.09-(time.monotonic()-last_request)
+            if delay>0:time.sleep(delay)
+        data=_itunes_search(artist,title)
+        if not isinstance(data,dict) or not data.get('results'):return out
+        want=norm(title)
+        best=None
+        for row in data['results']:
+            name=norm(str(row.get('trackName','')))
+            if not name:continue
+            if name==want or want in name or name in want:
+                best=row;break
+        best=best or data['results'][0]
+        if best.get('previewUrl'):out['spotify_preview']=best['previewUrl']
+        if best.get('artworkUrl100'):out['spotify_art']=best['artworkUrl100'].replace('100x100','300x300')
+        if best.get('trackViewUrl'):out['apple_url']=best['trackViewUrl']
+    except Exception:pass
     return out
 download_locks={}
 download_guard=threading.Lock()
@@ -177,6 +239,7 @@ def read_preview(url):
         return data,content
 
 audio_cache=AudioCache(load_audio)
+spotify_cache=AudioCache(lambda song: read_preview(song.get('spotify_preview','')))
 FILTER_OPTIONS=filter_options()
 class Handler(BaseHTTPRequestHandler):
     protocol_version="HTTP/1.1"
@@ -214,6 +277,17 @@ class Handler(BaseHTTPRequestHandler):
                 if not song: return self.reply({'error':'Audio expired'},404)
                 b,typ=audio_cache.get(os.getenv('AUDIO_SOURCE','preview')+':'+song['id'],song)
                 self.send_response(200); self.send_header('Content-Type',typ); self.send_header('Content-Length',str(len(b))); self.send_header('Cache-Control','private, max-age=300'); self.end_headers(); self.wfile.write(b); return
+            if u.path.startswith('/spotify-audio/'):
+                key=u.path.split('/')[-1]
+                with lock: r=next((r for r in rooms.values() if r.get('audioKey')==key),None); ans=dict(r['song']) if r else None
+                if not ans: return self.reply({'error':'Audio expired'},404)
+                try:ans.update(spotify_enrich(ans.get('artist',''),ans.get('title','')))
+                except Exception:pass
+                preview_url=ans.get('spotify_preview','')
+                if not preview_url: return self.reply({'error':'No Spotify preview for this track'},404)
+                try:b,typ=spotify_cache.get('spotify:'+preview_url,{'spotify_preview':preview_url})
+                except Exception as e: return self.reply({'error':str(e)},404)
+                self.send_response(200); self.send_header('Content-Type',typ); self.send_header('Content-Length',str(len(b))); self.send_header('Cache-Control','private, max-age=300'); self.end_headers(); self.wfile.write(b); return
             path=ROOT/'static'/('index.html' if u.path=='/' else u.path.lstrip('/'))
             if not path.resolve().is_relative_to((ROOT/'static').resolve()) or not path.is_file(): return self.reply({'error':'Not found'},404)
             b=path.read_bytes(); self.send_response(200); self.send_header('Cache-Control','no-store'); self.send_header('Content-Type',mimetypes.guess_type(path)[0] or 'text/plain'); self.send_header('Content-Length',str(len(b))); self.end_headers(); self.wfile.write(b)
@@ -231,7 +305,8 @@ class Handler(BaseHTTPRequestHandler):
                         if time.time()-rooms[c]['created']>86400: del rooms[c]
                     if len(rooms)>100: raise ValueError('Server room limit reached')
                     code=secrets.token_hex(3).upper(); p=secrets.token_urlsafe(24)
-                    r={'code':code,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits') else 'guess','multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[]}
+                    r={'code':code,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits') else 'guess','multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[],
+                       'previous_artists':[str(a) for a in d.get('previous_artists',[]) or []][:24],'previous_songs':[str(s) for s in d.get('previous_songs',[]) or []][:40]}
                     rooms[code]=r
                     if not r['multi']: advance(r)
                     return self.reply({'room':code,'token':p})
@@ -253,7 +328,14 @@ class Handler(BaseHTTPRequestHandler):
                 elif action=='lobby':
                     if p!=r['host'] or r['phase']!='finished':raise ValueError('Only the host can return a finished match to the lobby')
                     for player in r['players'].values():player['score']=0
-                    r.update(phase='lobby',round=0,stage=0,guesses={},history=[],winners=[],artist_counts={},country_counts={},recent_artists=[])
+                    # Remember this match's tail so the next match in the same
+                    # room (or the same browser's next solo game) avoids
+                    # immediate repeats when the pool is large enough.
+                    tail=[t for t in r.get('pool',[]) if t['id'] in r.get('used',[])[-20:]]
+                    r.update(phase='lobby',round=0,stage=0,guesses={},history=[],winners=[],
+                             previous_artists=[artist_key(t) for t in tail],
+                             previous_songs=[t['id'] for t in tail],
+                             artist_counts={},country_counts={},recent_artists=[])
                 elif action=='next':
                     if p!=r['host'] or r['phase'] not in ['lobby','reveal']: raise ValueError('Only host can continue')
                     if r['round']>=r['rounds']: r['phase']='finished'

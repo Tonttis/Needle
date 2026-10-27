@@ -15,3 +15,4 @@ body[data-motion=full] .vinyl,body[data-motion=calm] .vinyl{animation:visible-sp
 
 /* Three game modes, stacked on small screens. */
 .modes{grid-template-columns:repeat(3,minmax(0,1fr))}.hits-card{background:linear-gradient(135deg,#26301d,#1b201b);border-color:#64753e}.hits-card.selected{border-color:var(--lime);box-shadow:0 0 28px #d5f87b15}.setup label[hidden]{display:none}@media(max-width:760px){.modes{grid-template-columns:1fr}}
+.reveal-extras{display:flex;gap:12px;align-items:center;justify-content:center;margin:14px 0;flex-wrap:wrap}.spotify-open{display:inline-block;padding:10px 16px;border-radius:99px;background:#1DB954;color:#06130b;font-weight:700;text-decoration:none}.spotify-open:hover{filter:brightness(1.1)}#spotify-play{padding:10px 16px;border-radius:99px}

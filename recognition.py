@@ -2,12 +2,31 @@
 Popularity ranks are only a secondary signal, never proof that a song is Easy.
 """
 import pathlib,re,unicodedata
-VERSION='v9-depth-3'
-COUNTRIES={'Finland':'FI','United Kingdom':'GB','Ireland':'IE','Sweden':'SE','Norway':'NO','Denmark':'DK','Germany':'DE','France':'FR','Belgium':'BE','Netherlands':'NL','Italy':'IT','Spain':'ES','Portugal':'PT','Poland':'PL','Austria':'AT','Switzerland':'CH','Moldova':'MD','Iceland':'IS','United States':'US','Canada':'CA','Australia':'AU','New Zealand':'NZ','Brazil':'BR','Colombia':'CO','Puerto Rico':'PR','South Korea':'KR','Japan':'JP','Jamaica':'JM','Nigeria':'NG','South Africa':'ZA'}
+VERSION='v9-ru-5'
+# Russian phonetic keyboard: user types Latin letters while on Cyrillic layout
+# (or vice versa). Map both directions so search works on the wrong layout.
+_RU_PHONETIC=str.maketrans({
+ 'q':'й','w':'ц','e':'у','r':'к','t':'е','y':'н','u':'г','i':'ш','o':'щ','p':'з','[':'х',']':'ъ',
+ 'a':'ф','s':'ы','d':'в','f':'а','g':'п','h':'р','j':'о','k':'л','l':'д',';':'ж',"'":'э',
+ 'z':'я','x':'ч','c':'с','v':'м','b':'и','n':'т','m':'ь',',':'б','.':'ю',
+ 'й':'q','ц':'w','у':'e','к':'r','е':'t','н':'y','г':'u','ш':'i','щ':'o','з':'p','х':'[','ъ':']',
+ 'ф':'a','ы':'s','в':'d','а':'f','п':'g','р':'h','о':'j','л':'k','д':'l','ж':';','э':"'",
+ 'я':'z','ч':'x','с':'c','м':'v','и':'b','т':'n','ь':'m','б':',','ю':'.',
+})
+COUNTRIES={'Finland':'FI','Russia':'RU','United Kingdom':'GB','Ireland':'IE','Sweden':'SE','Norway':'NO','Denmark':'DK','Germany':'DE','France':'FR','Belgium':'BE','Netherlands':'NL','Italy':'IT','Spain':'ES','Portugal':'PT','Poland':'PL','Austria':'AT','Switzerland':'CH','Moldova':'MD','Iceland':'IS','United States':'US','Canada':'CA','Australia':'AU','New Zealand':'NZ','Brazil':'BR','Colombia':'CO','Puerto Rico':'PR','South Korea':'KR','Japan':'JP','Jamaica':'JM','Nigeria':'NG','South Africa':'ZA'}
 AREAS={'Nordics':{'FI','SE','NO','DK','IS'},'Latin America':{'BR','CO','PR','MX','AR','CL','CU','DO'},'Asia':{'JP','KR','IN','TH','PH'},'Africa':{'NG','ZA','GH','CM','KE'},'Oceania':{'AU','NZ'}}
 def text_key(value):
  value=''.join(c for c in unicodedata.normalize('NFKD',value.casefold()) if not unicodedata.combining(c))
  return re.sub(r'[^\w]+','',value)
+
+def layout_variants(value):
+  """Return the query as-typed plus the opposite-keyboard-layout version.
+
+  Covers RU phonetic QWERTY<->ЙЦУКЕН swaps. Cheap: only returns a second
+  candidate when the swap actually changes the string.
+  """
+  swapped=value.translate(_RU_PHONETIC)
+  return (value,) if swapped==value else (value,swapped)
 def song_key(value):
  # Remove only credit/mastering suffixes. Keep meaningful subtitles intact.
  value=re.sub(r'\s*[\[(](?:feat\.?|ft\.?|with)\s+[^\])]*[\])]','',value,flags=re.I)
@@ -24,7 +43,9 @@ def is_hot_hit(artist,title):return song_key(title) in HOT_HITS.get(text_key(art
 PROFILES={}
 for line in pathlib.Path(__file__).with_name('recognition_data.tsv').read_text(encoding='utf-8').splitlines():
  if not line or line.startswith('#'):continue
- country,language,genres,artist,reach,titles,evidence=line.split('|')
+ parts=line.split('|')
+ if len(parts)!=7:continue
+ country,language,genres,artist,reach,titles,evidence=parts
  PROFILES[text_key(artist)]=dict(name=artist,country=country,language=language,genres=genres.split(';'),reach=reach,titles={song_key(t) for t in titles.split(';')},examples=titles.split(';'),evidence=evidence)
 # Specialist standards are Easy inside their genre; Medium in Mixed unless proven crossover.
 SPECIALIST={'Jazz','Blues','K-pop','J-pop','Afrobeats','Country','Metal','Soul / Funk'}

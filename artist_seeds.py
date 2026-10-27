@@ -101,6 +101,11 @@ GROUPS = [
 ('MD','Romanian','Rock','Zdob \u0219i Zdub'),
 ('IS','English','Pop','Bj\u00f6rk|Of Monsters and Men'),
 ('IS','English','Rock','Kaleo|Sigur R\u00f3s'),
+('RU','Russian','Pop','Zemfira|Alsou|Nyusha|Polina Gagarina|Sergey Lazarev|Dima Bilan|Filipp Kirkorov|Alla Pugacheva|Valery Meladze|Egor Kreed|Zivert|Artik & Asti|Ruki Vverh!|Zveri|Bi-2|Splean|Mumiy Troll|Kino|t.A.T.u.|Maksim|Yolka|LOBODA|Gradusy|IOWA|LSP|Anna Asti|Klava Koka|Niletto|HammAli & Navai|JONY|Basta'),
+('RU','English','Dance','ARTY|Swanky Tunes|Matisse & Sadko|Bobina'),
+('RU','Russian','Rap / Hip Hop','Kasta|Basta|Timati|Oxxxymiron|Noize MC|Guf|Skryptonite|LSP|Morgenshtern|Eldzhey|Feduk|Big Baby Tape|Jah Khalib|MiyaGi & Endspiel'),
+('RU','Russian','Rock','Kino|DDT|Bi-2|Splean|Mumiy Troll|Leningrad|Zveri|Zemfira|Aria|Korol i Shut|Slot|Amatory'),
+('RU','Russian','Electronic','Mujuice|IC3PEAK|Cream Soda|Dead Blonde|Aigel'),
 ]
 EUROPE={'GB','IE','SE','NO','DK','DE','FR','BE','NL','IT','ES','PT','PL','AT','CH','FI','MD','IS'}
 NORTH_AMERICA={'US','CA','MX','PR'}
