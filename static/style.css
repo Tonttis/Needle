@@ -137,3 +137,8 @@ body.in-game .wrapup-actions button{padding:8px 14px}
  body.in-game #final-scores li{padding:3px 6px}
  body.in-game #host-wait{display:none}
 }
+
+body.in-game #game[data-phase="lobby"]{grid-template-areas:'top top' 'scores scores' 'player interaction' 'player next'}
+#lobby-settings{grid-area:interaction;align-self:center;background:#1b1f28;border:1px solid #39404e;border-radius:16px;padding:12px;min-width:0}#lobby-settings h2{font-size:18px;margin:0}#lobby-settings p{margin:5px 0}.lobby-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.lobby-fields label{font-size:11px;color:var(--muted);min-width:0}.lobby-fields select,.lobby-fields input{display:block;width:100%;font-size:12px;padding:6px}#lobby-party{border:0;padding:5px 0;font-size:11px}#lobby-party label{display:inline-block;margin-right:8px}#lobby-party input{width:auto}#lobby-save,#lobby-cancel{padding:6px 12px;font-size:12px}#lobby-progress{font-size:11px}#lobby-progress progress{width:100%}@media(max-width:650px){.lobby-fields{grid-template-columns:repeat(2,minmax(0,1fr))}#lobby-settings{padding:7px}#lobby-settings h2{font-size:14px}#lobby-settings p{font-size:10px}}
+
+@media(max-width:700px){body.in-game #game[data-phase="lobby"]{grid-template-areas:'top' 'scores' 'player' 'interaction' 'next'}}

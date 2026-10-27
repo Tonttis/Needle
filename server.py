@@ -304,7 +304,7 @@ def state(r,p):
         r['_stats']={'tracks':len(r['pool']),'answers':len(playable),'artists':len({artist_key(t) for t in playable}),'countries':len({t.get('country','?') for t in playable})}
     out['catalog']=r['_stats']
     if r['phase']=='finished':out['recap']=r.get('recap',[])
-    out['base_difficulty']=r.get('base_difficulty',r.get('difficulty','Normal'));out['playlist_report']=r.get('playlist_report');out['game_mode']=r.get('game_mode',r['mode']);out['party_modes']=r.get('party_modes',[]);out['decade']=r.get('decade','All');out['region']=r.get('region','Worldwide'); out['difficulty']=r.get('difficulty','Normal')
+    out['playlist_url']=r.get('playlist_url','') if p==r['host'] and r['phase']=='lobby' else '';out['base_difficulty']=r.get('base_difficulty',r.get('difficulty','Normal'));out['playlist_report']=r.get('playlist_report');out['game_mode']=r.get('game_mode',r['mode']);out['party_modes']=r.get('party_modes',[]);out['decade']=r.get('decade','All');out['region']=r.get('region','Worldwide'); out['difficulty']=r.get('difficulty','Normal')
     if r['phase'] in ['reveal','finished']:
         out['correct']=p in r.get('winners',[])
         out['result']='correct' if out['correct'] else 'incorrect' if r['guesses'].get(p) else 'skipped'
@@ -625,11 +625,38 @@ class Handler(BaseHTTPRequestHandler):
                         if time.time()-rooms[c]['created']>86400: del rooms[c]
                     if len(rooms)>100: raise ValueError('Server room limit reached')
                     code=secrets.token_hex(3).upper(); p=secrets.token_urlsafe(24)
-                    r={'code':code,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits','race','party') else 'guess','game_mode':'party' if d.get('mode')=='party' else d.get('mode','guess'),'party_modes':party_modes,'playlist_report':playlist_report,'base_difficulty':d.get('difficulty','Normal'),'multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'decade':d.get('decade','All'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[],
+                    r={'code':code,'hydrate':True,'created':time.time(),'players':{p:{'name':str(d.get('name','You'))[:24] or 'You','score':0}},'host':p,'pool':tracks,'used':[],'mode':d.get('mode') if d.get('mode') in ('choice','hits','race','party') else 'guess','game_mode':'party' if d.get('mode')=='party' else d.get('mode','guess'),'party_modes':party_modes,'playlist_report':playlist_report,'playlist_url':playlist_url,'base_difficulty':d.get('difficulty','Normal'),'multi':bool(d.get('multi')),'genre':d.get('genre','Mixed'),'region':d.get('region','Worldwide'),'difficulty':d.get('difficulty','Normal'),'decade':d.get('decade','All'),'phase':'lobby','round':0,'rounds':max(1,min(30,int(d.get('rounds',10)))),'stage':0,'deadline':0,'guesses':{},'history':[],
                        'previous_artists':[str(a) for a in d.get('previous_artists',[]) or []][:24],'previous_songs':[str(s) for s in d.get('previous_songs',[]) or []][:40]}
                     rooms[code]=r
                     if not r['multi']: advance(r)
                     return self.reply({'room':code,'token':p})
+            if action=='settings':
+                # Perform provider work outside the global room lock, and validate again
+                # before applying: a host may have started or left while loading.
+                code=str(d.get('room','')).upper(); token=d.get('token')
+                with lock:
+                    room=rooms.get(code)
+                    if not room or token!=room['host'] or room['phase']!='lobby':raise ValueError('Only the host can edit a lobby')
+                mode=d.get('mode'); party_modes=d.get('party_modes',[])
+                if mode not in ('guess','choice','race','hits','party'):raise ValueError('Invalid game mode')
+                if not isinstance(party_modes,list) or any(m not in ('guess','choice','race','hits') for m in party_modes) or (mode=='party' and not party_modes):raise ValueError('Choose at least one Party mode.')
+                party_modes=list(dict.fromkeys(party_modes)) if mode=='party' else []
+                url=str(d.get('playlist_url','')).strip(); decade=d.get('decade','All')
+                genre=d.get('genre','Mixed');region=d.get('region','Worldwide');difficulty=d.get('difficulty','Easy')
+                report=None
+                if url:
+                    tracks,report=playlist_pool(url,'All');genre=region=difficulty='Playlist';decade='All'
+                else:
+                    if mode=='hits':genre,region,difficulty='Mixed','Worldwide','Hits'
+                    tracks=pool(genre,region,difficulty,decade)
+                if (mode=='hits' or 'hits' in party_modes) and len({artist_key(t) for t in tracks if t.get('hot_hit')})<4:raise ValueError('Not enough Hottest Hits in this mix. Choose another mode or broaden the mix.')
+                rounds=max(1,min(30,int(d.get('rounds',10))))
+                with lock:
+                    r=rooms.get(code)
+                    if r is not room or token!=r['host'] or r['phase']!='lobby':raise ValueError('Lobby changed while preparing settings')
+                    r.update(pool=tracks,mode=mode,game_mode=mode,party_modes=party_modes,party_cycle=[],playlist_url=url,playlist_report=report,genre=genre,region=region,difficulty=difficulty,base_difficulty=difficulty,decade=decade,rounds=rounds,used=[],artist_counts={},country_counts={},recent_artists=[],_next_round=None)
+                    r.pop('_stats',None)
+                    return self.reply(state(r,token))
             with lock:
                 r=rooms.get(str(d['room']).upper())
                 if not r:raise ValueError('This room could not be found. Ask for a new invite.')
@@ -677,7 +704,7 @@ class Handler(BaseHTTPRequestHandler):
                     # immediate repeats when the pool is large enough.
                     tail=[t for t in r.get('pool',[]) if t['id'] in r.get('used',[])[-20:]]
                     r.update(phase='lobby',mode='party' if r.get('game_mode')=='party' else r['mode'],difficulty=r.get('base_difficulty',r['difficulty']),party_cycle=[],round=0,stage=0,guesses={},history=[],winners=[],
-                             recap=[],_next_round=None,_current_prefetch=None,previous_artists=[artist_key(t) for t in tail],
+                             recap=[],used=[],deadline=0,guess_times={},race_cooldowns={},race_wrong={},race_started=None,recap_recorded=False,_next_round=None,_current_prefetch=None,previous_artists=[artist_key(t) for t in tail],
                              previous_songs=[t['id'] for t in tail],
                              artist_counts={},country_counts={},recent_artists=[])
                 elif action=='next':
