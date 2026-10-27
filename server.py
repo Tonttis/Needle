@@ -1,3 +1,6 @@
+from audio_cache import AudioCache
+import hashlib
+import copy
 import sqlite3
 import json, os, secrets, time, random, threading, urllib.request, urllib.parse, subprocess, pathlib, mimetypes
 from catalog import choose_song, artist_key, build_pool, round_choices, norm, REGIONS, DIFFICULTIES, GENRES as CATALOG_GENRES
@@ -12,7 +15,7 @@ rooms={}; lock=threading.RLock(); cache={}
 request_lock=threading.Lock()
 last_request=0.0
 
-def fetch(path):
+def _fetch(path):
     global last_request
     now=time.time()
     if path in cache and now-cache[path][0]<86400:return cache[path][1]
@@ -37,6 +40,11 @@ def fetch(path):
     with sqlite3.connect(DATA/'catalog-cache.sqlite',timeout=20) as db:
         db.execute('INSERT OR REPLACE INTO responses VALUES (?,?,?)',(path,now,json.dumps(value)))
     return value
+metadata_locks={}
+metadata_guard=threading.Lock()
+def fetch(path):
+    with metadata_guard:mutex=metadata_locks.setdefault(path,threading.Lock())
+    with mutex:return _fetch(path)
 def clean(t):
     names=list(dict.fromkeys(a['name'] for a in [t['artist']]+t.get('contributors',[]) if a.get('name')))
     return {'id':str(t['id']),'title':t['title'],'artist':', '.join(names),'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link','')}
@@ -53,22 +61,53 @@ def suggestions(r,term):
     if len(term)<2:return []
     song=r['song']
     rows=[t for t in r['pool'] if t.get('genre')==song.get('genre') and t.get('language')==song.get('language')]
-    def relevance(t):
+    scored=[]
+    words=term.split()
+    for t in rows:
         title=norm(t['title']); artist=norm(t['artist']); text=title+' '+artist
-        return (3 if title==term or artist==term else 2 if all(w in text for w in term.split()) else SequenceMatcher(None,term,title).ratio())
-    rows=[t for t in rows if relevance(t)>.55]
-    return sorted(rows,key=lambda t:(-relevance(t),norm(t['title']),norm(t['artist'])))[:25]
+        score=3 if title==term or artist==term else 2 if all(w in text for w in words) else SequenceMatcher(None,term,title).ratio()
+        if score>.55:scored.append((-score,title,artist,t))
+    scored.sort(key=lambda x:x[:3])
+    return [x[3] for x in scored[:25]]
 
-def pool(genre,region='Worldwide',difficulty='Normal'):
+catalog_workers=ThreadPoolExecutor(max_workers=2)
+credit_workers=ThreadPoolExecutor(max_workers=2)
+catalog_jobs={}
+catalog_started={}
+catalog_guard=threading.Lock()
+credit_pending=set()
+def queue_credit(t):
+    if t.get('_credits') or t['id'] in credit_pending or len(credit_pending)>=48:return
+    credit_pending.add(t['id'])
+    def run():
+        try:credit(t)
+        finally:credit_pending.discard(t['id'])
+    credit_workers.submit(run)
+def prepare_catalog(genre,region,difficulty):
     if genre not in CATALOG_GENRES or region not in REGIONS or difficulty not in DIFFICULTIES:
         raise ValueError('Invalid music filters')
-    return build_pool(fetch,clean,genre,region,difficulty)
+    key=(genre,region,difficulty)
+    with catalog_guard:
+        job=catalog_jobs.get(key)
+        if job and (not job.done() or (job.exception() is None and time.time()-catalog_started.get(key,0)<86400)):return job
+        def build():
+            path=DATA/('pool-full-'+hashlib.sha256('|'.join(key).encode()).hexdigest()[:20]+'.json')
+            if path.exists() and time.time()-path.stat().st_mtime<86400:
+                try:return json.loads(path.read_text())
+                except (ValueError,OSError):pass
+            rows=build_pool(fetch,clean,*key)
+            tmp=path.with_suffix('.tmp');tmp.write_text(json.dumps(rows));tmp.replace(path)
+            return rows
+        job=catalog_workers.submit(build);catalog_jobs[key]=job;catalog_started[key]=time.time();return job
+def pool(genre,region='Worldwide',difficulty='Normal'):
+    try:return copy.deepcopy(prepare_catalog(genre,region,difficulty).result(timeout=20))
+    except TimeoutError:raise ValueError('This new mix is still loading in the background. Try Start again shortly; the work is being reused.')
 def advance(r):
     r['song']=choose_song(r); r['used'].append(r['song']['id'])
     r['stage']=0; r['guesses']={}; r['history']=[]; r['round']+=1; r['phase']='playing'; r['deadline']=time.time()+45
     r['board'],r['options']=round_choices(r['song'],r['pool'])
     if r.get('hydrate',False):
-        with ThreadPoolExecutor(max_workers=4) as workers: list(workers.map(credit,r['options']))
+        for track in r['options']:queue_credit(track)
     r['audioKey']=secrets.token_urlsafe(24)
     r['deadline']=time.time()+45
 def settle(r):
@@ -86,7 +125,8 @@ def state(r,p):
     settle(r)
     out={k:r[k] for k in ['code','mode','multi','phase','round','rounds','stage','deadline','genre','history']}
     out['players']=[dict(name=v['name'],score=v['score'],me=k==p,host=k==r['host'],submitted=k in r['guesses']) for k,v in r['players'].items()]
-    out['catalog']={'tracks':len(r['pool']),'artists':len({artist_key(t) for t in r['pool']}),'countries':len({t.get('country','?') for t in r['pool']})}
+    if '_stats' not in r:r['_stats']={'tracks':len(r['pool']),'artists':len({artist_key(t) for t in r['pool']}),'countries':len({t.get('country','?') for t in r['pool']})}
+    out['catalog']=r['_stats']
     out['region']=r.get('region','Worldwide'); out['difficulty']=r.get('difficulty','Normal')
     if r['phase'] in ['reveal','finished']:
         out['correct']=p in r.get('winners',[])
@@ -96,21 +136,44 @@ def state(r,p):
     if r['mode']=='choice' and r['phase']=='playing': out['options']=[{k:t[k] for k in ['id','title','artist']} for t in r['options']]
     if r['phase']=='reveal': out['answer']={k:v for k,v in r['song'].items() if k not in ['preview','_credits']}
     return out
+download_locks={}
+download_guard=threading.Lock()
+def download_lock(track_id):
+    with download_guard:return download_locks.setdefault(track_id,threading.Lock())
+def load_audio(song):
+    if os.getenv('AUDIO_SOURCE','preview')=='youtube':
+        target=DATA/(song['id']+'.mp3')
+        with download_lock(song['id']):
+            if not target.exists():
+                subprocess.run(['yt-dlp','--no-playlist','--max-filesize','30M','--download-sections','*0-20','-x','--audio-format','mp3','-o',str(DATA/(song['id']+'.%(ext)s')),'ytsearch1:'+song['artist']+' '+song['title']+' official audio'],check=True,timeout=100,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        b=target.read_bytes(); typ='audio/mpeg'
+    else:
+        with urllib.request.urlopen(song['preview'],timeout=20) as a: b=a.read(5_000_000); typ=a.headers.get('Content-Type','audio/mpeg')
+    return b,typ
+audio_cache=AudioCache(load_audio)
 class Handler(BaseHTTPRequestHandler):
+    protocol_version="HTTP/1.1"
+    def setup(self):
+        super().setup(); self.connection.settimeout(30)
     def reply(self,v,status=200):
-        b=json.dumps(v).encode(); self.send_response(status); self.send_header('Content-Type','application/json'); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(b)
+        b=json.dumps(v).encode(); self.send_response(status); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(b))); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
         try:
             u=urllib.parse.urlparse(self.path); q=urllib.parse.parse_qs(u.query)
+            if u.path=='/api/warm':
+                job=prepare_catalog(q.get('genre',['Mixed'])[0],q.get('region',['Worldwide'])[0],q.get('difficulty',['Normal'])[0])
+                return self.reply({'ready':job.done() and job.exception() is None})
             if u.path=='/api/genres': return self.reply(CATALOG_GENRES)
             if u.path=='/api/search':
                 with lock:
                     r=rooms[q.get('room',[''])[0]]
                     if q.get('token',[''])[0] not in r['players']: raise ValueError('Invalid session')
                     term=q.get('q',[''])[0][:100]
-                    rows=suggestions(r,term) if r['phase']=='playing' and r['mode']=='guess' else []
+                    search_room={'pool':r['pool'],'song':r.get('song')} if r['phase']=='playing' and r['mode']=='guess' else None
                     round_number=r['round']; stage=r['stage']
-                with ThreadPoolExecutor(max_workers=4) as workers: rows=list(workers.map(credit,rows))
+                rows=suggestions(search_room,term) if search_room else []
+                # Search never waits for external contributor lookups.
+                for track in rows:queue_credit(track)
                 return self.reply({'round':round_number,'stage':stage,'results':[{k:t[k] for k in ['id','title','artist']} for t in rows]})
             if u.path=='/api/state':
                 with lock:
@@ -121,18 +184,11 @@ class Handler(BaseHTTPRequestHandler):
                 key=u.path.split('/')[-1]
                 with lock: r=next((r for r in rooms.values() if r.get('audioKey')==key),None); song=dict(r['song']) if r else None
                 if not song: return self.reply({'error':'Audio expired'},404)
-                if os.getenv('AUDIO_SOURCE','preview')=='youtube':
-                    target=DATA/(song['id']+'.mp3')
-                    with audio_lock:
-                        if not target.exists():
-                            subprocess.run(['yt-dlp','--no-playlist','--max-filesize','30M','--download-sections','*0-20','-x','--audio-format','mp3','-o',str(DATA/(song['id']+'.%(ext)s')),'ytsearch1:'+song['artist']+' '+song['title']+' official audio'],check=True,timeout=100,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-                    b=target.read_bytes(); typ='audio/mpeg'
-                else:
-                    with urllib.request.urlopen(song['preview'],timeout=20) as a: b=a.read(5_000_000); typ=a.headers.get('Content-Type','audio/mpeg')
-                self.send_response(200); self.send_header('Content-Type',typ); self.send_header('Cache-Control','private, max-age=300'); self.end_headers(); self.wfile.write(b); return
+                b,typ=audio_cache.get(os.getenv('AUDIO_SOURCE','preview')+':'+song['id'],song)
+                self.send_response(200); self.send_header('Content-Type',typ); self.send_header('Content-Length',str(len(b))); self.send_header('Cache-Control','private, max-age=300'); self.end_headers(); self.wfile.write(b); return
             path=ROOT/'static'/('index.html' if u.path=='/' else u.path.lstrip('/'))
             if not path.resolve().is_relative_to((ROOT/'static').resolve()) or not path.is_file(): return self.reply({'error':'Not found'},404)
-            b=path.read_bytes(); self.send_response(200); self.send_header('Cache-Control','no-store'); self.send_header('Content-Type',mimetypes.guess_type(path)[0] or 'text/plain'); self.end_headers(); self.wfile.write(b)
+            b=path.read_bytes(); self.send_response(200); self.send_header('Cache-Control','no-store'); self.send_header('Content-Type',mimetypes.guess_type(path)[0] or 'text/plain'); self.send_header('Content-Length',str(len(b))); self.end_headers(); self.wfile.write(b)
         except Exception as e: self.reply({'error':str(e)},400)
     def do_POST(self):
         try:
@@ -176,5 +232,4 @@ class Handler(BaseHTTPRequestHandler):
                 else: raise ValueError('Unknown action')
                 return self.reply(state(r,p))
         except Exception as e: self.reply({'error':str(e)},400)
-audio_lock=threading.Lock()
 if __name__=='__main__': ThreadingHTTPServer(('0.0.0.0',int(os.getenv('PORT',3000))),Handler).serve_forever()

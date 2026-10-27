@@ -1,4 +1,4 @@
-# Needle V5
+# Needle V6
 Private music guessing with two modes, genre/scene/familiarity filters, animated vinyl, audio-reactive particles, and multiplayer rooms.
 
 ## Install or upgrade
@@ -8,7 +8,7 @@ Keep your `.env` and `data/` when replacing application files. Include the new `
 docker compose up -d --build
 ```
 
-Open http://localhost:3000 or your server's address. The header shows **V5**. For Coolify, replace/commit these application files in your repository and redeploy the Compose service. This ZIP does not modify your remote repository automatically.
+Open http://localhost:3000 or your server's address. The header shows **V6**. For Coolify, replace/commit these application files in your repository and redeploy the Compose service. This ZIP does not modify your remote repository automatically.
 
 Use a private VPN or access-controlled reverse proxy for friends outside your LAN. No user accounts are implemented; room links invite players but do not protect the whole service.
 
@@ -62,7 +62,7 @@ Run:
 python -m unittest -v
 ```
 
-23 tests cover matching, contributors, scoring, timeouts, discovery filtering and anti-repeat selection. A deterministic test runs 1,000 complete ten-song Europe matches against intentionally Finnish-heavy fixture data: each had ten different artists and countries and at most one Finnish track. Finnish sequences of 3, 10, 20 and 30 songs verify artist rotation and no consecutive repeat. A partial-provider-failure test verifies a two-artist result is rejected.
+29 tests cover caching, latency, matching, contributors, scoring, timeouts, discovery filtering and anti-repeat selection. A deterministic test runs 1,000 complete ten-song Europe matches against intentionally Finnish-heavy fixture data: each had ten different artists and countries and at most one Finnish track. Finnish sequences of 3, 10, 20 and 30 songs verify artist rotation and no consecutive repeat. A partial-provider-failure test verifies a two-artist result is rejected.
 
 HTTP integration tests run actual two-player, ten-round games in both modes through creation, joining, guessing, scoring, final results, returning to the lobby and restarting. Catalog data is mocked for these tests.
 
@@ -72,3 +72,22 @@ A live Deezer request in this environment returned an HTML "Site Unavailable" re
 
 ## Implementation
 Python 3.12 standard-library HTTP server, SQLite metadata cache, vanilla JS/CSS and one-second room polling. Preview mode needs no Python packages. Run locally with `python server.py`; YouTube mode also needs yt-dlp and FFmpeg. Docker installs those automatically.
+
+## V6 performance audit
+Catalog size and selection quality are preserved: the same 735 discovery artists, 80-anchor target, 160-attempt recovery budget, 12-second provider timeout, difficulty bands, country balancing and artist rotation remain. No smaller starter catalog is shipped.
+
+- Search and Next perform no blocking provider requests. Contributor enrichment uses two background workers with a bounded pending set. Credits appear when returned by the provider; primary credits are available immediately.
+- Catalogs preload when filters are selected, and completed full pools persist for 24 hours in `data/pool-full-*.json`. Concurrent requests share the same catalog job. Cold builds may still be slow because they fetch the full catalog; Start waits up to 20 seconds, then gives a retry message while preserving the job.
+- Identical metadata requests share one in-flight fetch. Existing SQLite metadata caches are preserved and reused.
+- Search computes normalization and fuzzy ranking once per candidate and works outside the global game lock. Pool statistics are computed once per room.
+- Audio requests share an in-flight fetch and a bounded 64 MB / 15-minute RAM cache. Independent YouTube tracks no longer block behind one global download lock. Audio quality/encoding is unchanged.
+- Browsers prefetch the current round's preview and retain up to three downloads. Choice buttons are not rebuilt every polling tick, preserving focus/click targets.
+- HTTP/1.1 responses include Content-Length to allow connection reuse. Idle particle drawing is capped near 30 fps, active playback remains frame-rate driven, and hidden game canvases are skipped. Particle count and visual design remain intact.
+
+New dependency-free source file: `audio_cache.py`. Preserve `.env` and `data/`, copy the complete package and rebuild. The header shows V6.
+
+Controlled local latency regression tests deliberately delay contributor lookups and require cached-catalog creation, search and Next each to finish under 250 ms. Parallel audio listeners are tested to share one download, with cache bounds and failure recovery checks. These are local tests, not a promise about internet latency or uncached YouTube downloads.
+
+V6 also renders mutation responses immediately and ignores polls begun before a newer action, preventing stale state from delaying Next or leaving a rejected guess disabled. The browser favicon is supplied in seven ICO sizes (16–256 px), SVG and 180 px Apple touch format. No runtime icon-generation dependency is needed.
+
+Live V5 testing at the supplied deployment reproduced a slow startup (935 songs / 68 artists loaded) and search waiting until a stage transition. V6 has been tested locally, not deployed to that server. The full-catalog cache test verifies unchanged track counts, shared jobs and disk-cache reuse after clearing memory.

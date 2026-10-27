@@ -73,7 +73,7 @@ def band(tracks,difficulty):
     if difficulty=='Normal': return tracks[:15]
     return tracks[5:40] or tracks
 
-def build_pool(fetch,clean,genre,region,difficulty):
+def build_pool(fetch,clean,genre,region,difficulty,target_artists=80):
     seeds=eligible(genre,region)
     if not seeds: raise ValueError('That genre/region combination has no curated artists yet. Choose another mix.')
     # Country-first discovery prevents a heavily populated local lane dominating.
@@ -96,7 +96,7 @@ def build_pool(fetch,clean,genre,region,difficulty):
         except (ValueError,KeyError):return []
     groups=[]
     minimum=min(12,len({norm(s['name']) for s in seeds}))
-    target=min(80,len(selected))
+    target=min(target_artists,len(selected))
     # Retry with fresh artists if some lookups fail, rather than silently starting
     # a tiny game from the first two artists whose requests happened to succeed.
     with ThreadPoolExecutor(max_workers=6) as workers:
