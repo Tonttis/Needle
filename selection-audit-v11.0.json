@@ -1,0 +1,1815 @@
+{
+  "cache_entries": 9477,
+  "missing_provider_requests": 846,
+  "combinations": 192,
+  "playable_combinations": 92,
+  "rounds": 9200,
+  "picker_median_ms": 2.928,
+  "picker_p95_ms": 8.399,
+  "results": [
+    {
+      "region": "Worldwide",
+      "genre": "Mixed",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 206,
+      "artists": 88,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Mixed",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 169,
+      "artists": 103,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Mixed",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 846,
+      "artists": 76,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Mixed",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1545,
+      "artists": 72,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Mixed",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 1369,
+      "artists": 56,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Mixed",
+      "difficulty": "Hits",
+      "status": "ok",
+      "songs": 162,
+      "artists": 103,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Pop",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 181,
+      "artists": 84,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Pop",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 154,
+      "artists": 84,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Pop",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 611,
+      "artists": 56,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Pop",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1203,
+      "artists": 52,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Pop",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 1571,
+      "artists": 47,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rock",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 124,
+      "artists": 50,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rock",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 85,
+      "artists": 49,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 85,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rock",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 700,
+      "artists": 60,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rock",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1550,
+      "artists": 58,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rock",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 2277,
+      "artists": 67,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Metal",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 28,
+      "artists": 11,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 28,
+      "first_15_artists": 11
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Metal",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 140,
+      "artists": 52,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Metal",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 792,
+      "artists": 64,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Metal",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1842,
+      "artists": 64,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Metal",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 2472,
+      "artists": 62,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 65,
+      "artists": 27,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 65,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 101,
+      "artists": 47,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 784,
+      "artists": 69,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1807,
+      "artists": 67,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 2165,
+      "artists": 76,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Dance",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 46,
+      "artists": 17,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 46,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Dance",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 112,
+      "artists": 46,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Dance",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 604,
+      "artists": 53,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Dance",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1116,
+      "artists": 52,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Dance",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 622,
+      "artists": 36,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Electronic",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Electronic",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Electronic",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 144,
+      "artists": 13,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 13
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Electronic",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 282,
+      "artists": 13,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 13
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Electronic",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 243,
+      "artists": 13,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 13
+    },
+    {
+      "region": "Worldwide",
+      "genre": "R&B",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 26,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 26,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Worldwide",
+      "genre": "R&B",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "R&B",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 136,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Worldwide",
+      "genre": "R&B",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 306,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Worldwide",
+      "genre": "R&B",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Indie / Alternative",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 33,
+      "artists": 19,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 33,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Indie / Alternative",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 34,
+      "artists": 19,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 34,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Indie / Alternative",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 235,
+      "artists": 20,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Indie / Alternative",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 496,
+      "artists": 19,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Indie / Alternative",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 420,
+      "artists": 14,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 14
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Soul / Funk",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Soul / Funk",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Soul / Funk",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Soul / Funk",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Soul / Funk",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Country",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Country",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Country",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Country",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Country",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Jazz",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Jazz",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Jazz",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Jazz",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Jazz",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Blues",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Blues",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Blues",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Blues",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Blues",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Reggae",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Reggae",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Reggae",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Reggae",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Reggae",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Latin",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Latin",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 49,
+      "artists": 20,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 49,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Latin",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 214,
+      "artists": 20,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Latin",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 431,
+      "artists": 18,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Latin",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 280,
+      "artists": 15,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Worldwide",
+      "genre": "K-pop",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "K-pop",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "K-pop",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "K-pop",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "K-pop",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "J-pop",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "J-pop",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "J-pop",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "J-pop",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "J-pop",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Afrobeats",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Afrobeats",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Afrobeats",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Afrobeats",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Worldwide",
+      "genre": "Afrobeats",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Mixed",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 229,
+      "artists": 105,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Mixed",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 172,
+      "artists": 100,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Mixed",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 963,
+      "artists": 86,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Mixed",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1851,
+      "artists": 81,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Mixed",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 1545,
+      "artists": 61,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Mixed",
+      "difficulty": "Hits",
+      "status": "ok",
+      "songs": 170,
+      "artists": 109,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Pop",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 185,
+      "artists": 89,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Pop",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 147,
+      "artists": 86,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Pop",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 842,
+      "artists": 76,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Pop",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1696,
+      "artists": 70,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Pop",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 1616,
+      "artists": 55,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rock",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 131,
+      "artists": 54,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rock",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 75,
+      "artists": 47,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 75,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rock",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 880,
+      "artists": 76,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rock",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1985,
+      "artists": 74,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rock",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 2902,
+      "artists": 80,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Metal",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 40,
+      "artists": 16,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 40,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Metal",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 92,
+      "artists": 39,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 92,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Metal",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 648,
+      "artists": 52,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Metal",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1482,
+      "artists": 52,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Metal",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 1981,
+      "artists": 49,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 66,
+      "artists": 28,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 66,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 79,
+      "artists": 40,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 79,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 700,
+      "artists": 62,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1597,
+      "artists": 60,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Rap / Hip Hop",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 1826,
+      "artists": 61,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Dance",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 74,
+      "artists": 34,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 74,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Dance",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 81,
+      "artists": 41,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 81,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Dance",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 592,
+      "artists": 52,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Dance",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 1093,
+      "artists": 51,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Dance",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 573,
+      "artists": 33,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Electronic",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Electronic",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Electronic",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 132,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Europe",
+      "genre": "Electronic",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 270,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Europe",
+      "genre": "Electronic",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "R&B",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 26,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 26,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Europe",
+      "genre": "R&B",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "R&B",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 136,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Europe",
+      "genre": "R&B",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 306,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Europe",
+      "genre": "R&B",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Indie / Alternative",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 33,
+      "artists": 19,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 33,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Indie / Alternative",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 34,
+      "artists": 19,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 34,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Indie / Alternative",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 235,
+      "artists": 20,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Indie / Alternative",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 496,
+      "artists": 19,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Indie / Alternative",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 420,
+      "artists": 14,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 14
+    },
+    {
+      "region": "Europe",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Punk / Pop Punk",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Soul / Funk",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Soul / Funk",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Soul / Funk",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Soul / Funk",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Soul / Funk",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Country",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Country",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Country",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Country",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Country",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Jazz",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Jazz",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Jazz",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Jazz",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Jazz",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Blues",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Blues",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Blues",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Blues",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Blues",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Reggae",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Reggae",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Reggae",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Reggae",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Reggae",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Latin",
+      "difficulty": "Easy",
+      "status": "ok",
+      "songs": 27,
+      "artists": 14,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 27,
+      "first_15_artists": 14
+    },
+    {
+      "region": "Europe",
+      "genre": "Latin",
+      "difficulty": "Medium",
+      "status": "ok",
+      "songs": 30,
+      "artists": 16,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 30,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Latin",
+      "difficulty": "Hard",
+      "status": "ok",
+      "songs": 166,
+      "artists": 16,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 15
+    },
+    {
+      "region": "Europe",
+      "genre": "Latin",
+      "difficulty": "Expert",
+      "status": "ok",
+      "songs": 345,
+      "artists": 14,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 14
+    },
+    {
+      "region": "Europe",
+      "genre": "Latin",
+      "difficulty": "Impossible",
+      "status": "ok",
+      "songs": 196,
+      "artists": 12,
+      "rounds": 100,
+      "premature_repeats": 0,
+      "unique_songs": 100,
+      "first_15_artists": 12
+    },
+    {
+      "region": "Europe",
+      "genre": "K-pop",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "K-pop",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "K-pop",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "K-pop",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "K-pop",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "J-pop",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "That genre/region combination has no curated artists yet. Choose another mix."
+    },
+    {
+      "region": "Europe",
+      "genre": "J-pop",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "That genre/region combination has no curated artists yet. Choose another mix."
+    },
+    {
+      "region": "Europe",
+      "genre": "J-pop",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "That genre/region combination has no curated artists yet. Choose another mix."
+    },
+    {
+      "region": "Europe",
+      "genre": "J-pop",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "That genre/region combination has no curated artists yet. Choose another mix."
+    },
+    {
+      "region": "Europe",
+      "genre": "J-pop",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "That genre/region combination has no curated artists yet. Choose another mix."
+    },
+    {
+      "region": "Europe",
+      "genre": "Afrobeats",
+      "difficulty": "Easy",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Afrobeats",
+      "difficulty": "Medium",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Afrobeats",
+      "difficulty": "Hard",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Afrobeats",
+      "difficulty": "Expert",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    },
+    {
+      "region": "Europe",
+      "genre": "Afrobeats",
+      "difficulty": "Impossible",
+      "status": "unavailable_in_cache",
+      "reason": "Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs."
+    }
+  ]
+}

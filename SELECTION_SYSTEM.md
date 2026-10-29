@@ -1,5 +1,7 @@
 # Needle 11 — selection and history
 
+The v11.1 Japanese catalog expansion is described in `JAPANESE_CATALOG.md`. The cached-provider audit below records v11.0, before that expansion.
+
 ## Selection contract
 
 All regular modes use the same picker. Party changes the round's mode/tier, then uses that picker. Custom playlists retain their own eligible tracks. Hottest Hits still requires its curated hit flag. Difficulty and decade are never widened to manufacture variety.
@@ -48,7 +50,7 @@ No database setup or migration is required. Keep the existing persistent `data/`
 
 - Full regression suite: 150 tests passed with the supplied database-copy tests enabled; additional playlist, lane, identity, history, and latency regressions were run after final refinements.
 - Synthetic selection matrix: 13,455 rounds across every advertised scene/genre/difficulty combination, plus separate mode/decade tests. These test selection contracts, not live catalog availability.
-- Read-only provider-cache audit: `selection-audit.json` contains all 192 Worldwide/Europe genre/tier checks. The supplied cache supports 92 of these and is incomplete for the others; unavailable combinations are explicitly reported, never filled with invented songs.
+- Read-only provider-cache audit: `selection-audit-v11.0.json` contains all 192 Worldwide/Europe genre/tier checks. The supplied cache supports 92 of these and is incomplete for the others; unavailable combinations are explicitly reported, never filled with invented songs.
 - The cache supports 65 distinct Easy Worldwide Rap songs from 27 artists, versus 47 songs from 20 artists in the previous package. Its first three five-round games use 15 songs by 15 artists. All 9,200 cached-pool simulated rounds have zero premature repeats.
 - A local stress benchmark reading 20,000 history entries and selecting from 5,000 tracks measured approximately 70 ms median / 90 ms p95. This is local CPU/database time, not a promise about provider or media-download latency.
 - All JavaScript regression checks passed. Live Deezer metadata could not be verified from this environment because the probe did not return valid JSON. Browser playback was not revalidated live for these backend changes.

@@ -60,7 +60,7 @@ class SelectionContracts(unittest.TestCase):
   self.assertGreaterEqual(len(anchors),35)
  def test_language_caps_apply_to_every_broad_genre(self):
   for genre in c.GENRES:
-   if genre in ('Latin','Reggae','Afrobeats','K-pop','J-pop'):continue
+   if genre in ('Latin','Reggae','Afrobeats','K-pop','J-pop','Anime'):continue
    pool=tracks(90,1)
    for i,t in enumerate(pool):t['language']=('Spanish','French','English')[i%3]
    for seed in range(20):

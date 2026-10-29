@@ -328,12 +328,6 @@ KR|Korean|K-pop|TWICE|global|What is Love?;The Feels;FANCY|editorial
 KR|Korean|K-pop|Jung Kook|global|Seven;Standing Next to You|editorial
 KR|Korean|K-pop|NewJeans|global|OMG;Super Shy;Ditto|editorial
 KR|Korean|K-pop|Stray Kids|global|God's Menu;MANIAC|editorial
-JP|Japanese|J-pop|YOASOBI|local|アイドル;夜に駆ける;Idol;Yoru Ni Kakeru|editorial
-JP|Japanese|J-pop|Ado|local|うっせぇわ;新時代;Usseewa;New Genesis|editorial
-JP|Japanese|J-pop|Hikaru Utada|local|First Love;Automatic|editorial
-JP|Japanese|J-pop|Kenshi Yonezu|local|Lemon;KICK BACK|editorial
-JP|Japanese|J-pop|LiSA|local|紅蓮華;Gurenge;炎;Homura|editorial
-JP|Japanese|J-pop|Creepy Nuts|local|Bling-Bang-Bang-Born|editorial
 JM|English|Reggae|Bob Marley & The Wailers|global|Three Little Birds;Could You Be Loved;Is This Love;No Woman, No Cry;One Love / People Get Ready|editorial
 JM|English|Reggae|Sean Paul|global|Temperature;Get Busy;She Doesn't Mind|editorial
 JM|English|Reggae|Shaggy|global|It Wasn't Me;Angel;Boombastic|editorial
@@ -548,3 +542,65 @@ US|English|Rap / Hip Hop|Kid Cudi|global|Day 'N' Nite;Pursuit Of Happiness (Nigh
 US|English|Rap / Hip Hop|Fugees|global|Ready Or Not;Fu-Gee-La;Killing Me Softly With His Song|editorial
 US|English|Rap / Hip Hop;Pop|Flo Rida|global|Low;Right Round;Good Feeling;Whistle|editorial
 US|English|Rap / Hip Hop;Pop|Black Eyed Peas|global|Where Is The Love?;Pump It;Let's Get It Started;Boom Boom Pow|editorial
+JP|Japanese|J-pop|YOASOBI|local|アイドル;Idol;夜に駆ける;Yoru Ni Kakeru;群青;Gunjou;怪物;Kaibutsu|editorial-japan-expanded
+JP|Japanese|J-pop|Ado|local|うっせぇわ;Usseewa;新時代;New Genesis;唱;Show;踊;Odo|editorial-japan-expanded
+JP|Japanese|J-pop|Hikaru Utada|local|First Love;Automatic;One Last Kiss;光;Hikari|editorial-japan-expanded
+JP|Japanese|J-pop|Kenshi Yonezu|local|Lemon;KICK BACK;ピースサイン;Peace Sign;感電;Kanden|editorial-japan-expanded
+JP|Japanese|J-pop|LiSA|local|紅蓮華;Gurenge;炎;Homura;crossing field;Rising Hope|editorial-japan-expanded
+JP|Japanese|J-pop|Creepy Nuts|local|Bling-Bang-Bang-Born;オトノケ;Otonoke;のびしろ;Nobishiro|editorial-japan-expanded
+JP|Japanese|J-pop|Mrs. GREEN APPLE|local|ライラック;Lilac;青と夏;Ao To Natsu;インフェルノ;Inferno;ケセラセラ;Que Sera Sera|editorial-japan-expanded
+JP|Japanese|J-pop|Official HIGE DANdism|local|Pretender;Subtitle;ミックスナッツ;Mixed Nuts;Cry Baby;I LOVE...|editorial-japan-expanded
+JP|Japanese|J-pop|King Gnu|local|白日;Hakujitsu;SPECIALZ;一途;Ichizu;逆夢;Sakayume|editorial-japan-expanded
+JP|Japanese|J-pop|Vaundy|local|怪獣の花唄;Kaiju No Hanauta;踊り子;Odoriko;怪獣の花唄 - replica -;CHAINSAW BLOOD;裸の勇者;Hadaka No Yuusha|editorial-japan-expanded
+JP|Japanese|J-pop|Fujii Kaze|local|きらり;Kirari;死ぬのがいいわ;Shinunoga E-Wa;満ちてゆく;Michi Teyu Ku;花;Hana|editorial-japan-expanded
+JP|Japanese|J-pop|back number|local|水平線;Suiheisen;高嶺の花子さん;Takane No Hanako San;クリスマスソング;Christmas Song|editorial-japan-expanded
+JP|Japanese|J-pop|Aimyon|local|マリーゴールド;Marigold;君はロックを聴かない;Kimi Wa Rock Wo Kikanai;裸の心;Hadaka No Kokoro|editorial-japan-expanded
+JP|Japanese|J-pop|Yorushika|local|ただ君に晴れ;Tada Kimi Ni Hare;だから僕は音楽を辞めた;Dakara Boku Wa Ongaku Wo Yameta;花に亡霊;Hana Ni Bourei;晴る;Haru|editorial-japan-expanded
+JP|Japanese|J-pop|Eve|local|廻廻奇譚;Kaikai Kitan;ドラマツルギー;Dramaturgy;お気に召すまま;Okinimesumama|editorial-japan-expanded
+JP|Japanese|J-pop|Aimer|local|残響散歌;Zankyosanka;カタオモイ;Kataomoi;Brave Shine;蝶々結び;Chouchou Musubi|editorial-japan-expanded
+JP|Japanese|J-pop|RADWIMPS|local|前前前世;Zenzenzense;スパークル;Sparkle;なんでもないや;Nandemonaiya;正解;Seikai|editorial-japan-expanded
+JP|Japanese|J-pop|BUMP OF CHICKEN|local|天体観測;Tentai Kansoku;カルマ;Karma;Hello,world!;SOUVENIR|editorial-japan-expanded
+JP|Japanese|J-pop|ONE OK ROCK|local|The Beginning;Wherever You Are;We Are;Stand Out Fit In|editorial-japan-expanded
+JP|Japanese|J-pop|SEKAI NO OWARI|local|Habit;RPG;Dragon Night;サザンカ;Sazanka|editorial-japan-expanded
+JP|Japanese|J-pop|Perfume|local|ポリリズム;Polyrhythm;チョコレイト・ディスコ;Chocolate Disco;FLASH;レーザービーム;Laser Beam|editorial-japan-expanded
+JP|Japanese|J-pop|Kyary Pamyu Pamyu|local|PONPONPON;にんじゃりばんばん;Ninjari Bang Bang;つけまつける;Tsukema Tsukeru|editorial-japan-expanded
+JP|Japanese|J-pop|Ayumi Hamasaki|local|SEASONS;M;BLUE BIRD;Boys & Girls|editorial-japan-expanded
+JP|Japanese|J-pop|Namie Amuro|local|CAN YOU CELEBRATE?;Hero;Baby Don't Cry;Love Story|editorial-japan-expanded
+JP|Japanese|J-pop|Kumi Koda|local|Butterfly;キューティーハニー;Cutie Honey;愛のうた;Ai No Uta|editorial-japan-expanded
+JP|Japanese|J-pop|Ai Otsuka|local|さくらんぼ;Sakuranbo;プラネタリウム;Planetarium;大好きだよ。;Daisuki Da Yo|editorial-japan-expanded
+JP|Japanese|J-pop|YUI|local|again;CHE.R.RY;Good-bye days;Rolling star|editorial-japan-expanded
+JP|Japanese|J-pop|Ikimonogakari|local|ブルーバード;Blue Bird;ありがとう;Arigatou;じょいふる;Joyful;SAKURA|editorial-japan-expanded
+JP|Japanese|J-pop|YUZU|local|栄光の架橋;Eikou No Kakehashi;夏色;Natsuiro;虹;Niji|editorial-japan-expanded
+JP|Japanese|J-pop|Spitz|local|チェリー;Cherry;ロビンソン;Robinson;空も飛べるはず;Sora Mo Toberu Hazu|editorial-japan-expanded
+JP|Japanese|J-pop|Mr.Children|local|Tomorrow never knows;HANABI;しるし;Shirushi;innocent world|editorial-japan-expanded
+JP|Japanese|J-pop|Southern All Stars|local|TSUNAMI;真夏の果実;Manatsu No Kajitsu;いとしのエリー;Itoshi No Ellie|editorial-japan-expanded
+JP|Japanese|J-pop|B'z|local|ultra soul;LOVE PHANTOM;いつかのメリークリスマス;Itsuka No Merry Christmas|editorial-japan-expanded
+JP|Japanese|J-pop|L'Arc-en-Ciel|local|READY STEADY GO;HONEY;Driver's High;flower|editorial-japan-expanded
+JP|Japanese|J-pop|GLAY|local|HOWEVER;誘惑;Yuuwaku;Winter,again|editorial-japan-expanded
+JP|Japanese|J-pop|Porno Graffitti|local|アゲハ蝶;Agehachou;サウダージ;Saudade;メリッサ;Melissa;アポロ;Apollo|editorial-japan-expanded
+JP|Japanese|J-pop|ORANGE RANGE|local|花;Hana;イケナイ太陽;Ikenai Taiyou;上海ハニー;Shanghai Honey;*〜アスタリスク〜;Asterisk|editorial-japan-expanded
+JP|Japanese|J-pop|ASIAN KUNG-FU GENERATION|local|リライト;Rewrite;遥か彼方;Haruka Kanata;ソラニン;Solanin;Re:Re:|editorial-japan-expanded
+JP|Japanese|J-pop|UVERworld|local|D-tecnoLife;CORE PRIDE;Touch off;ODD FUTURE|editorial-japan-expanded
+JP|Japanese|J-pop|KANA-BOON|local|シルエット;Silhouette;ないものねだり;Naimononedari;バトンロード;Baton Road|editorial-japan-expanded
+JP|Japanese|J-pop|SPYAIR|local|イマジネーション;Imagination;サムライハート;Some Like It Hot!!;サクラミツツキ;Sakura Mitsutsuki|editorial-japan-expanded
+JP|Japanese|J-pop|UNISON SQUARE GARDEN|local|シュガーソングとビターステップ;Sugar Song And Bitter Step;オリオンをなぞる;Orion Wo Nazoru;カオスが極まる;Chaos Ga Kiwamaru|editorial-japan-expanded
+JP|Japanese|J-pop|Reol|local|第六感;The Sixth Sense;宵々古今;YoiYoi Kokon;第六感 - From THE FIRST TAKE|editorial-japan-expanded
+JP|Japanese|J-pop|ZUTOMAYO|local|秒針を噛む;Byoushin Wo Kamu;正しくなれない;Can't Be Right;お勉強しといてよ;Study Me|editorial-japan-expanded
+JP|Japanese|J-pop|Yuuri|local|ドライフラワー;Dry Flower;ベテルギウス;Betelgeuse;シャッター;Shutter|editorial-japan-expanded
+JP|Japanese|J-pop|Da-iCE|local|CITRUS;スターマイン;Starmine;I wonder|editorial-japan-expanded
+JP|Japanese|J-pop|Sakurazaka46|local|Start over!;承認欲求;Shoninyokkyu;流れ弾;Nagaredama|editorial-japan-expanded
+JP|Japanese|J-pop|Nogizaka46|local|インフルエンサー;Influencer;シンクロニシティ;Synchronicity;帰り道は遠回りしたくなる;Kaerimichi Wa Toomawari Shitaku Naru|editorial-japan-expanded
+JP|Japanese|J-pop|AKB48|local|恋するフォーチュンクッキー;Koisuru Fortune Cookie;ヘビーローテーション;Heavy Rotation;フライングゲット;Flying Get|editorial-japan-expanded
+JP|Japanese|J-pop|ATARASHII GAKKO!|local|オトナブルー;Otonablue;Tokyo Calling;青春を切り裂く波動;Seishun Wo Kirisaku Hado|editorial-japan-expanded
+JP|Japanese|J-pop|NiziU|local|Make you happy;Take a picture;Poppin' Shakin'|editorial-japan-expanded
+JP|Japanese|J-pop|MAISONdes|local|アイウエ;Aiue;トウキョウ・シャンディ・ランデヴ;Tokyo Shandy Rendez-vous|editorial-japan-expanded
+JP|Japanese|J-pop|Mariya Takeuchi|local|Plastic Love;プラスティック・ラブ;元気を出して;Genki Wo Dashite;駅;Eki|editorial-japan-expanded
+JP|Japanese|J-pop|Miki Matsubara|local|真夜中のドア;真夜中のドア〜stay with me;Mayonaka No Door;Stay With Me;ニートな午後3時;Neat Na Gogo San Ji|editorial-japan-expanded
+JP|Japanese|J-pop|Tatsuro Yamashita|local|RIDE ON TIME;クリスマス・イブ;Christmas Eve;SPARKLE|editorial-japan-expanded
+JP|Japanese|J-pop|Anri|local|CAT'S EYE;悲しみがとまらない;I Can't Stop The Loneliness;Remember Summer Days|editorial-japan-expanded
+JP|Japanese|J-pop|Akina Nakamori|local|DESIRE -情熱-;少女A;Shoujo A;ミ・アモーレ;Mi Amore|editorial-japan-expanded
+JP|Japanese|J-pop|Seiko Matsuda|local|赤いスイートピー;Akai Sweet Pea;青い珊瑚礁;Aoi Sangoshou;SWEET MEMORIES|editorial-japan-expanded
+JP|Japanese|J-pop|Taeko Onuki|local|都会;Tokai;4:00A.M.;くすりをたくさん;Kusuri Wo Takusan|editorial-japan-expanded
+JP|Japanese|J-pop|Yumi Matsutoya|local|春よ、来い;Haru Yo Koi;やさしさに包まれたなら;Yasashisa Ni Tsutsumareta Nara;ルージュの伝言;Rouge No Dengon|editorial-japan-expanded
+JP|Japanese|J-pop|TM NETWORK|local|Get Wild;BEYOND THE TIME;Self Control|editorial-japan-expanded
+JP|Japanese|J-pop|Toshinobu Kubota|local|LA・LA・LA LOVE SONG;Missing;流星のサドル;Ryuusei No Saddle|editorial-japan-expanded

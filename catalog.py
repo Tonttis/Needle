@@ -59,7 +59,7 @@ for seed in SEEDS:
     if seed['name']=='Europe':seed['genre']='Rock'
     if seed['name'] in ['Ares','Damso']:seed['genre']='Rap / Hip Hop'
 SEEDS=list({(norm(s['name']),s['genre']):s for s in SEEDS}.values())
-from recognition import HOT_HITS, PROFILES, COUNTRIES, AREAS, VERSION, text_key, song_key, profile, recognition, classify_tracks, in_difficulty
+from recognition import HOT_HITS, PROFILES, COUNTRIES, AREAS, VERSION, text_key, song_key, profile, recognition, classify_tracks, in_difficulty, anime_song, known_titles, artist_names, canonical_artist_key, canonical_title
 # Merge per-artist tags: Mixed never fetches/weights one artist twice for crossover genres.
 merged={}
 for seed in SEEDS:
@@ -79,12 +79,13 @@ for seed in merged.values():
         if seed['genre']=='Rap / Hip Hop':seed['genre']=seed['genres'][0]
 SEEDS=list(merged.values())
 REGIONS=['Worldwide','Europe','North America',*AREAS,*COUNTRIES]
-GENRES=['Mixed','Pop','Rock','Metal','Rap / Hip Hop','Dance','Electronic','R&B','Indie / Alternative','Punk / Pop Punk','Soul / Funk','Country','Jazz','Blues','Reggae','Latin','K-pop','J-pop','Afrobeats']
+GENRES=['Mixed','Pop','Rock','Metal','Rap / Hip Hop','Dance','Electronic','R&B','Indie / Alternative','Punk / Pop Punk','Soul / Funk','Country','Jazz','Blues','Reggae','Latin','K-pop','J-pop','Anime','Afrobeats']
 DIFFICULTIES=['Easy','Medium','Hard','Expert','Impossible']
 def eligible(genre,region):
     def matches(s):
         if region in COUNTRIES:return s.get('country','FI' if s['region']=='Finland' else '')==COUNTRIES[region]
         if region in AREAS:return s.get('country') in AREAS[region]
+        if region=='Europe' and genre in ('J-pop','Anime') and s.get('country')=='JP':return True
         if region=='Europe':return s['region'] in ('Europe','Finland') or bool(profile(s) and profile(s)['reach'] in ('global','europe'))
         return region=='Worldwide' or s['region']==region
     return [dict(s,genre=genre if genre!='Mixed' else s['genre']) for s in SEEDS if (genre=='Mixed' or genre in s.get('genres',[s['genre']])) and matches(s)]
@@ -98,13 +99,16 @@ def filter_options():
             seeds=eligible(genre,region)
             if len(seeds)<4:continue
             from recognition import recognition
-            easy=sum(any(recognition(seed,t,region,genre)>=85 for t in (profile(seed) or {}).get('examples',[])) for seed in seeds)
-            support[region][genre]=[d for d in DIFFICULTIES if d!='Easy' or easy>=4]
+            easy=sum(any(recognition(seed,t,region,genre)>=85 for t in known_titles(seed,genre)) for seed in seeds)
+            if genre=='Anime':
+                support[region][genre]=[d for d in DIFFICULTIES if sum(any(in_difficulty({'recognition':recognition(seed,title,region,genre)},d) for title in known_titles(seed,genre)) for seed in seeds)>=4]
+                if not support[region][genre]:del support[region][genre]
+            else:support[region][genre]=[d for d in DIFFICULTIES if d!='Easy' or easy>=4]
     return dict(regions=REGIONS,genres=GENRES,difficulties=DIFFICULTIES,support=support)
 def title_key(t):
     title=re.sub(r'\s*[\(\[].*?(?:remaster|version|edit).*?[\)\]]','',t['title'],flags=re.I)
     title=re.sub(r'\s*-\s*(?:\d{4}\s+)?remaster.*','',title,flags=re.I)
-    return str(t.get('artist_id') or norm(t.get('seed_artist',t['artist'])))+'|'+song_key(title)
+    return str(t.get('artist_id') or norm(t.get('seed_artist',t['artist'])))+'|'+song_key(canonical_title(t.get('seed_artist') or t['artist'],title))
 def band(tracks,difficulty):
     return [t for t in tracks if in_difficulty(t,difficulty)]
 
@@ -118,24 +122,31 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80,progress=No
         selected.sort(key=lambda seed:0 if text_key(seed['name']) in HOT_HITS else 1)
     if difficulty in ('Easy','Medium','Normal'):
         # Known hits are fetched first; retain the entire discovery registry.
-        selected.sort(key=lambda seed:0 if any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[])) else 1 if profile(seed) else 2)
+        selected.sort(key=lambda seed:0 if any(recognition(seed,title,region,genre)>=85 for title in known_titles(seed,genre)) else 1 if profile(seed) else 2)
     # Avoid requests that cannot possibly produce an answer in this tier.
     # Keep the full returned discography for search/distractors. This makes
     # wider playable coverage affordable without extra foreground round I/O.
     if difficulty=='Easy':
-        known_seeds=[seed for seed in selected if any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[]))]
+        known_seeds=[seed for seed in selected if any(recognition(seed,title,region,genre)>=85 for title in known_titles(seed,genre))]
         if known_seeds:selected=known_seeds
     elif difficulty=='Hits':
         hit_seeds=[seed for seed in selected if text_key(seed['name']) in HOT_HITS]
         if hit_seeds:selected=hit_seeds
+    if genre=='Anime':
+        tier_seeds=[seed for seed in selected if any(in_difficulty({'recognition':recognition(seed,title,region,genre)},difficulty) for title in known_titles(seed,genre))]
+        selected=tier_seeds
+        if not selected:raise ValueError('No curated Anime themes meet this difficulty in this scene.')
     def load(seed):
         try:
-            results=fetch('search/artist?limit=10&q='+__import__('urllib.parse',fromlist=['quote']).quote(seed['name'])).get('data',[])
-            exact=[a for a in results if norm(a['name'])==norm(seed['name'])]
-            aliases=[a for a in results if text_key(a['name'])==text_key(seed['name'])]
-            # Prefer an exact name before punctuation aliases (Emine'm is
-            # not Eminem); provider ordering is not an identity guarantee.
-            artist=max(exact or aliases,key=lambda a:int(a.get('nb_fan') or 0),default=None)
+            artist=None;names=artist_names(seed['name'])
+            for query_name in names[:2]:
+                results=fetch('search/artist?limit=10&q='+__import__('urllib.parse',fromlist=['quote']).quote(query_name)).get('data',[])
+                exact=[a for a in results if norm(a['name']) in {norm(n) for n in names}]
+                aliases=[a for a in results if canonical_artist_key(a['name'])==canonical_artist_key(seed['name'])]
+                # Exact official spellings precede punctuation aliases. A
+                # single native-name retry handles Japanese-only search indexes.
+                artist=max(exact or aliases,key=lambda a:int(a.get('nb_fan') or 0),default=None)
+                if artist:break
             if not artist:return []
             rows=fetch(f"artist/{artist['id']}/top?limit=100").get('data',[])
             # Harder tiers go one page deeper: top index 50 mostly holds album
@@ -150,6 +161,7 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80,progress=No
             for raw in rows:
                 if not raw.get('preview') or str(raw['artist']['id'])!=str(artist['id']): continue
                 if re.search(r'\b(live|karaoke|tribute|sped up|slowed|remix)\b',raw.get('title_version','')+' '+raw['title'],re.I):continue
+                if genre=='Anime' and not anime_song(seed['name'],raw['title']):continue
                 t=clean(raw);t.update(seed_artist=seed['name'],genre=seed['genre'],genres=seed.get('genres',[seed['genre']]),language=seed['language'],region=seed['region'],country=seed.get('country','FI' if seed['region']=='Finland' else 'GB'),artist_id=str(artist['id']),rank=raw.get('rank',0))
                 k=title_key(t)
                 if k not in dedup or t['rank']>dedup[k]['rank']:dedup[k]=t
@@ -158,8 +170,9 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80,progress=No
     groups=[]
     minimum=min(12,len({norm(s['name']) for s in seeds}))
     if difficulty=='Easy':
-        known=sum(any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[])) for seed in seeds)
+        known=sum(any(recognition(seed,title,region,genre)>=85 for title in known_titles(seed,genre)) for seed in seeds)
         minimum=min(12,max(4,known))
+    if genre=='Anime':minimum=min(12,max(4,len(selected)))
     # Aim for eligible artists, not successful HTTP requests. An artist with
     # zero songs in this tier does not contribute to playable breadth.
     attainable=len(selected)
@@ -216,7 +229,7 @@ def artist_key(t):
 
 @lru_cache(maxsize=32768)
 def history_identity(artist,title):
-    artist=text_key(artist);title=song_key(title)
+    title=song_key(canonical_title(artist,title));artist=canonical_artist_key(artist)
     return 'song:'+artist+'|'+title if artist and title else ''
 
 def song_history_keys(t):
@@ -272,7 +285,7 @@ def choose_song(r, rng=None):
     # Broad audience mixes should not be dominated by any one language lane.
     # Metadata describes an artist's predominant language, not each lyric.
     # Limits yield when the remaining catalog is too narrow to comply.
-    if r.get('region') in ('Europe','Worldwide') and r.get('genre','Mixed') not in ('Latin','Reggae','Afrobeats','K-pop','J-pop') and not r.get('playlist_report'):
+    if r.get('region') in ('Europe','Worldwide') and r.get('genre','Mixed') not in ('Latin','Reggae','Afrobeats','K-pop','J-pop','Anime') and not r.get('playlist_report'):
         rounds=max(1,r.get('rounds',10)); each=max(1,rounds//5); combined=max(1,rounds*3//10)
         limited={'Spanish','French'}
         lane_total=sum(language_counts.get(lang,0) for lang in limited)
@@ -284,7 +297,7 @@ def choose_song(r, rng=None):
     candidates=[t for t in candidates if history.get(artist_key(t),0)==least]
     exposure=r.get('_artist_play_counts',{})
     def artist_exposure(t):
-        return exposure.get(text_key(t.get('seed_artist') or t['artist']),0)
+        return exposure.get(canonical_artist_key(t.get('seed_artist') or t['artist']),0)
     least=min(map(artist_exposure,candidates))
     candidates=[t for t in candidates if artist_exposure(t)==least]
     # Soft country weights preserve variety without demanding one obscure artist

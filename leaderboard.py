@@ -2,7 +2,7 @@
 import datetime, hashlib, json, random, sqlite3
 from pathlib import Path
 from contextlib import contextmanager
-from recognition import text_key
+from recognition import text_key, canonical_artist_key, canonical_title, song_key
 
 DB_PATH=Path(__file__).parent/'data'/'needle-scores.sqlite3'
 
@@ -43,7 +43,7 @@ def daily_snapshot(day, tracks):
         for track in json.loads(pool_json):
             if track['id'] not in ids:continue
             seen.update(song_history_keys(track))
-            artist=text_key(track.get('seed_artist') or track['artist'])
+            artist=canonical_artist_key(track.get('seed_artist') or track['artist'])
             artists[artist]=artists.get(artist,0)+1
     room=dict(pool=sorted(candidates,key=lambda t:str(t['id'])),used=[],mode='guess',
               difficulty='Easy',genre='Mixed',region='Europe',rounds=5,
@@ -117,7 +117,8 @@ def selection_history(names):
     for key,plays,last in rows:
         if key.startswith('song:') and '|' in key:
             artist,title=key[5:].split('|',1)
-            artist=text_key(artist)
+            title=song_key(canonical_title(artist,title))
+            artist=canonical_artist_key(artist)
             key='song:'+artist+'|'+title
             artists[artist]=artists.get(artist,0)+plays
         # Normalize older identities in memory; preserve the database and its
