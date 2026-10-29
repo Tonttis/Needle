@@ -3,7 +3,6 @@ import copy,json,math,pathlib,re,secrets,subprocess,threading,time,urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
 import leaderboard as boards
-from catalog import history_identity
 from recognition import anime_song,layout_variants,song_key
 
 PICK_SECONDS=30
@@ -121,7 +120,7 @@ class Duel:
         players=list(r['players']);offset=1+(r['round']-1)%(len(players)-1)
         outgoing={p:players[(i+offset)%len(players)] for i,p in enumerate(players)}
         incoming={receiver:owner for owner,receiver in outgoing.items()}
-        r['duel']=dict(incoming=incoming,outgoing=outgoing,generation=secrets.token_urlsafe(16),songs={},candidates={p:{} for p in r['players']},positions={},revisions={},locked=set(),ready=set(),done={},feedback={},attempts={},clips={},clip_keys={},clip_pending=set(),recorded=set(),starts_at=0)
+        r['duel']=dict(incoming=incoming,outgoing=outgoing,generation=secrets.token_urlsafe(16),songs={},candidates={p:{} for p in r['players']},positions={},revisions={},locked=set(),ready=set(),done={},feedback={},attempts={},clips={},clip_keys={},clip_pending=set(),starts_at=0)
 
     def candidate(self,raw):
         track=self.clean(raw)
@@ -247,16 +246,7 @@ class Duel:
 
     def start_guessing(self,r,now):
         d=r['duel']
-        try:
-            for p in r['players']:
-                if p in d['done']:continue
-                song=d['songs'][self.other(r,p)]
-                if p not in d['recorded']:
-                    boards.record_played([r['players'][p]['name']],song['id'],history_identity(song.get('seed_artist') or song['artist'],song['title']))
-                    d['recorded'].add(p)
-        except Exception:
-            d['error']='Song history could not be saved. Check the server data storage, then retry this round.'
-            r.update(phase='duel-error',deadline=0);return
+        # Player-chosen duel songs must not affect catalog repeat exclusions.
         started=time.time()+1
         d['starts_at']=started;r.update(phase='playing',deadline=started+GUESS_SECONDS)
 

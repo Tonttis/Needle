@@ -52,6 +52,28 @@ class DuelHTTPTests(HTTPGameTests):
   return a,b
  def assert_http_error(self,fn):
   with self.assertRaises(urllib.error.HTTPError):fn()
+ def test_host_can_switch_both_directions_in_same_room_and_play(self):
+  from test_variety import fixture_tracks
+  a=self.post('create',dict(mode='duel',multi=True,name='Alice',rounds=1));self.created.append(a['room'])
+  b=self.post('join',dict(room=a['room'],name='Bob'))
+  settings=dict(mode='choice',genre='Mixed',region='Europe',difficulty='Easy',decade='All',rounds=1)
+  with patch.object(s,'pool',return_value=fixture_tracks()),patch.object(s,'queue_credit'):
+   self.assert_http_error(lambda:self.post('settings',dict(**b,**settings)))
+   view=self.post('settings',dict(**a,**settings));self.assertEqual(view['mode'],'choice')
+   self.assertEqual(view['code'],a['room']);self.assertEqual(len(view['players']),2)
+   self.assertEqual(self.state(b)['mode'],'choice')
+   view=self.post('next',a);self.assertEqual(view['phase'],'playing')
+   self.assert_http_error(lambda:self.post('settings',dict(**a,mode='duel')))
+   room=s.rooms[a['room']];room['phase']='finished'
+   self.post('lobby',a)
+  with patch.object(s,'pool',side_effect=AssertionError('Duel must not prepare catalog')):
+   self.assert_http_error(lambda:self.post('settings',dict(**b,mode='duel')))
+   view=self.post('settings',dict(**a,mode='duel',rounds=1))
+   self.assertEqual(view['mode'],'duel');self.assertEqual(view['code'],a['room']);self.assertEqual(len(view['players']),2)
+   self.assertEqual(self.state(b)['mode'],'duel')
+   view=self.post('duel-next',a);self.assertEqual(view['phase'],'picking')
+   self.pick(a,0);self.pick(b,1);self.assertEqual(self.state(a)['phase'],'clips')
+
  def test_online_only_two_to_eight_and_host_controls(self):
   self.assert_http_error(lambda:self.post('create',dict(mode='duel',multi=False,name='Alice')))
   a=self.post('create',dict(mode='duel',multi=True,name='Alice',rounds=3));self.created.append(a['room'])
@@ -130,7 +152,7 @@ class DuelHTTPTests(HTTPGameTests):
     token=player['token'];target=room['duel']['songs'][incoming[token]]
     own_key=room['duel']['clip_keys'][token]
     with self.assertRaises(ValueError):s.DUEL.clip(host['room'],players[(index+1)%count]['token'],own_key,0,1)
-    self.assertIn(target['id'],lb.played_song_ids([room['players'][token]['name']]))
+    self.assertFalse(lb.played_song_ids([room['players'][token]['name']]))
     view=self.act(player,'guess',guess=target['title'])
     self.assertEqual(view['phase'],'reveal' if index==count-1 else 'playing')
    self.assertEqual(len(view['duel']['answers']),count);self.assertTrue(all(p['score']==1 for p in view['players']))
@@ -172,8 +194,8 @@ class DuelHTTPTests(HTTPGameTests):
   self.assertNotIn('Song A',json.dumps(self.state(b)))
   reveal=self.act(b,'guess',guess='Song A');self.assertEqual(reveal['phase'],'reveal')
   self.assertEqual([p['score'] for p in reveal['players']],[1,1]);self.assertEqual(len(reveal['duel']['answers']),2)
-  self.assertIn('2',lb.played_song_ids(['Alice']));self.assertNotIn('1',lb.played_song_ids(['Alice']))
-  self.assertIn('1',lb.played_song_ids(['Bob']));self.assertNotIn('2',lb.played_song_ids(['Bob']))
+  self.assertFalse(lb.played_song_ids(['Alice']))
+  self.assertFalse(lb.played_song_ids(['Bob']))
   old_key=av['duel']['clip_key'];finished=self.post('duel-next',a);self.assertEqual(finished['phase'],'finished')
   self.state(a);self.state(b);self.assertEqual(len(lb.leaderboard('duel','Duel',True)),2)
   self.assertEqual(lb.profile('Alice')['games'],1)
@@ -253,12 +275,13 @@ class DuelHTTPTests(HTTPGameTests):
    self.assert_http_error(lambda:self.get('duel-search?'+params))
   self.assertEqual(self.state(a)['phase'],'reveal')
 
- def test_history_write_failure_pauses_instead_of_starting_untracked_play(self):
+ def test_duel_never_writes_repeat_history_and_preserves_existing_entries(self):
+  lb.record_played(['Alice'],'existing-normal-song')
   a,b,_=self.room();self.pick(a,0);self.pick(b,1)
   self.clips(a,[0,10,20,30,40]);self.clips(b,[0,10,20,30,40]);self.act(a,'ready')
-  with patch.object(lb,'record_played',side_effect=OSError('storage unavailable')):view=self.act(b,'ready')
-  self.assertEqual(view['phase'],'duel-error');self.assertEqual(view['deadline'],0);self.assertIn('history',view['duel']['error'])
-  self.assertEqual([p['score'] for p in view['players']],[0,0])
+  with patch.object(lb,'record_played',side_effect=AssertionError('Duel must not write history')):view=self.act(b,'ready')
+  self.assertEqual(view['phase'],'playing')
+  self.assertEqual(lb.played_song_ids(['Alice']),{'existing-normal-song'});self.assertFalse(lb.played_song_ids(['Bob']))
 
 class DuelPureTests(unittest.TestCase):
  def test_video_links_only_allow_known_hosts_and_video_ids(self):

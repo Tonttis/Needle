@@ -2,6 +2,7 @@
 import json,pathlib,subprocess,tempfile,time
 import server as s
 import duel
+from test_variety import fixture_tracks
 
 def main():
     temporary=tempfile.TemporaryDirectory();root=pathlib.Path(temporary.name)
@@ -18,6 +19,8 @@ def main():
         name=song['title'][-1];path,length=audio[name]
         return 'abcdefghij'+name,song['title'],path,length,'audio/mp4'
     s.DUEL.fetch=search;s.DUEL.load_media=load
+    s.pool=lambda *args:[dict(t,hot_hit=True) for t in fixture_tracks()]
+    s.queue_credit=lambda *args:None
     def no_preview(*args):raise ValueError('Use fixture audio')
     s.deezer_reveal_cache.get=no_preview
     original_time=time.time;offset=[0.]
@@ -25,9 +28,12 @@ def main():
     class Handler(s.Handler):
         def log_message(self,*args):pass
         def do_GET(self):
+            if self.path.startswith('/api/catalog-status'):return self.reply({'phase':'ready'})
             if self.path.startswith('/api/warm'):return self.reply({'ready':True})
             return super().do_GET()
         def do_POST(self):
+            if self.path=='/api/catalog-prepare':
+                self.rfile.read(int(self.headers.get('Content-Length',0)));return self.reply({'job':'fixture'})
             if self.path=='/__test/advance':
                 count=int(self.headers.get('Content-Length',0))
                 value=json.loads(self.rfile.read(count));offset[0]+=float(value['seconds'])

@@ -835,8 +835,18 @@ class Handler(BaseHTTPRequestHandler):
                 with lock:
                     room=rooms.get(code)
                     if not room or token!=room['host'] or room['phase']!='lobby':raise ValueError('Only the host can edit a lobby')
-                    if room.get('mode')=='duel':raise ValueError('Use the Song Duel lobby controls to change its rounds.')
                 mode=d.get('mode'); party_modes=d.get('party_modes',[])
+                if mode=='duel':
+                    rounds=max(1,min(30,int(d.get('rounds',5))))
+                    with lock:
+                        r=rooms.get(code)
+                        if r is not room or token!=r['host'] or r['phase']!='lobby':raise ValueError('Lobby changed while preparing settings')
+                        if not r.get('multi'):raise ValueError('Song Duel is online only.')
+                        if r.get('mode')!='duel':
+                            r.update(mode='duel',game_mode='duel',genre='Anything',region='Worldwide',difficulty='Duel',base_difficulty='Duel',decade='All',duel=None,recap=[],score_max=0,round=0,stage=0,deadline=0,history=[],guesses={},pool=[],used=[],party_modes=[],playlist_url='',playlist_report=None,anime_answer='song',_next_round=None)
+                            r.pop('_stats',None)
+                        r['rounds']=rounds
+                        return self.reply(state(r,token))
                 if mode not in ('guess','choice','race','hits','party'):raise ValueError('Invalid game mode')
                 if not isinstance(party_modes,list) or any(m not in ('guess','choice','race','hits') for m in party_modes) or (mode=='party' and not party_modes):raise ValueError('Choose at least one Party mode.')
                 party_modes=list(dict.fromkeys(party_modes)) if mode=='party' else []
@@ -860,6 +870,8 @@ class Handler(BaseHTTPRequestHandler):
                     if r is not room or token!=r['host'] or r['phase']!='lobby':raise ValueError('Lobby changed while preparing settings')
                     r.update(pool=tracks,mode=mode,game_mode=mode,anime_answer=anime_answer,party_modes=party_modes,party_cycle=[],playlist_url=url,playlist_report=report,genre=genre,region=region,difficulty=difficulty,base_difficulty=difficulty,decade=decade,rounds=rounds,used=[],artist_counts={},country_counts={},language_counts={},recent_artists=[],_next_round=None)
                     r.pop('_stats',None)
+                    r.pop('duel',None)
+                    r.setdefault('stage',0);r.setdefault('history',[]);r.setdefault('guesses',{});r.setdefault('hydrate',True)
                     return self.reply(state(r,token))
             with lock:
                 r=rooms.get(str(d['room']).upper())

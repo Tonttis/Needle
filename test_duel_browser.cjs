@@ -31,10 +31,24 @@ async function positions(page,values){
   const a=await aContext.newPage(),b=await bContext.newPage();
   await a.goto(base);await a.locator('[data-mode="duel"]').click();assert.equal(await a.locator('#solo').isVisible(),false);assert.equal(await a.locator('#genre').isVisible(),false);
   const art=await a.locator('.duel-card-art img').boundingBox();assert.ok(Math.abs(art.width/art.height-260/160)<.02);await a.screenshot({path:path.join(shots,'home-duel.png')});
-  await a.locator('#name').fill('Alice');await a.locator('#create').click();await phase(a,'lobby');await bounds(a,'lobby desktop');assert.equal(await a.locator('#duel-volume').isVisible(),true);await a.locator('#duel-volume').fill('0.35');assert.equal(await a.locator('#duel-volume-value').textContent(),'35%');
-  const av=await state(a);await a.locator('#duel-rounds').selectOption('1');
+  await a.locator('#name').fill('Alice');await a.locator('#create').click();await phase(a,'lobby');await bounds(a,'lobby desktop');await a.locator('#volume').fill('0.35');
+  const av=await state(a);await a.locator('#lobby-rounds').selectOption('1');await a.locator('#lobby-save').click();await a.waitForFunction(()=>!document.querySelector('#lobby-save').disabled);
   await b.goto(base+'/?room='+av.code);await b.locator('#invite-name').fill('Bob');await b.locator('#invite-join').click();await phase(b,'lobby');await bounds(b,'lobby phone');
-  await a.locator('#duel-start').click();await phase(a,'picking');await phase(b,'picking');
+  const originalRoom=av.code;
+  for(const mode of ['choice','race','hits','party','guess','duel']){
+   await a.locator('#lobby-mode').selectOption(mode);
+   if(mode==='party')await a.locator('#lobby-party input[value=guess]').check();
+   assert.equal(await a.locator('#lobby-source').isVisible(),mode!=='duel');
+   await a.locator('#lobby-save').click();
+   console.log('Checking lobby switch:',mode);
+   await a.waitForFunction(mode=>document.querySelector('#game').dataset.mode===mode&&!document.querySelector('#lobby-save').disabled,mode);
+   await b.waitForFunction(mode=>document.querySelector('#game').dataset.mode===mode&&document.querySelector('#lobby-mode').value===mode,mode);
+   assert.equal((await state(a)).code,originalRoom);assert.equal((await state(b)).players.length,2);
+   assert.equal(await b.locator('#lobby-mode').isDisabled(),true);
+   await bounds(a,'switch '+mode+' desktop');await bounds(b,'switch '+mode+' phone');
+   const controls=await b.locator('#lobby-settings').boundingBox();assert.ok(controls.y>=0&&controls.y+controls.height<=844,'lobby settings visible on phone');
+  }
+  await a.locator('#next').click();await phase(a,'picking');await phase(b,'picking');
   await pick(a,0);await pick(b,1);await phase(a,'clips');await phase(b,'clips');
   assert.ok(!(await a.locator('#duel-panel').textContent()).includes('Song B'));assert.ok(!(await b.locator('#duel-panel').textContent()).includes('Song A'));
   await positions(a,[80,20,60,0,40]);await positions(b,[45,15,35,5,25]);assert.deepEqual((await state(a)).duel.positions,[0,20,40,60,80]);assert.deepEqual((await state(b)).duel.positions,[5,15,25,35,45]);assert.deepEqual(await a.locator('#duel-markers span').allTextContents(),['1','2','3','4','5']);await bounds(a,'clips desktop');await bounds(b,'clips phone');for(const viewport of [{width:360,height:640},{width:844,height:390}]){await b.setViewportSize(viewport);await bounds(b,'clips '+viewport.width+'x'+viewport.height)}await b.setViewportSize({width:390,height:844});
@@ -64,7 +78,7 @@ async function positions(page,values){
   await a.screenshot({path:path.join(shots,'reveal-desktop.png')});await b.screenshot({path:path.join(shots,'reveal-phone.png')});
   await a.locator('#duel-next').click();await phase(a,'finished');await phase(b,'finished');await bounds(a,'finished desktop');await bounds(b,'finished phone');
   const board=await a.evaluate(async()=> (await fetch('/api/leaderboard?mode=duel&difficulty=Duel&multi=1')).json());assert.equal(board.entries.length,2);
-  await a.locator('#duel-rematch').click();await phase(a,'lobby');await phase(b,'lobby');await a.locator('#duel-start').click();await phase(b,'picking');
+  await a.locator('#duel-rematch').click();await phase(a,'lobby');await phase(b,'lobby');await a.locator('#next').click();await phase(b,'picking');
   await pick(a,0);await a.request.post(base+'/__test/advance',{data:{seconds:31}});await phase(a,'reveal');await phase(b,'reveal');
   assert.deepEqual((await state(a)).players.map(p=>p.score),[1,0]);assert.ok((await a.locator('#duel-panel').textContent()).includes('forfeit'));
   assert.equal(await a.locator('#error').textContent(),'');assert.equal(await b.locator('#error').textContent(),'');assert.deepEqual(errors,[],'browser errors');
