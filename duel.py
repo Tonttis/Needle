@@ -117,7 +117,12 @@ class Duel:
         if not 2<=len(r['players'])<=MAX_PLAYERS:raise ValueError('Song Duel needs 2–8 players before starting.')
         if not retry:r['round']+=1;r['score_max']+=1
         r.update(phase='picking',deadline=time.time()+PICK_SECONDS)
-        players=list(r['players']);offset=1+(r['round']-1)%(len(players)-1)
+        players=list(r['players'])
+        if r.get('game_mode')=='party':
+            if not retry:r['duel_round']=r.get('duel_round',0)+1
+            assignment_round=r.get('duel_round',1)
+        else:assignment_round=r['round']
+        offset=1+(assignment_round-1)%(len(players)-1)
         outgoing={p:players[(i+offset)%len(players)] for i,p in enumerate(players)}
         incoming={receiver:owner for owner,receiver in outgoing.items()}
         r['duel']=dict(incoming=incoming,outgoing=outgoing,generation=secrets.token_urlsafe(16),songs={},candidates={p:{} for p in r['players']},positions={},revisions={},locked=set(),ready=set(),done={},feedback={},attempts={},clips={},clip_keys={},clip_pending=set(),starts_at=0)
@@ -257,7 +262,7 @@ class Duel:
         for owner,song in d['songs'].items():
             receiver=self.recipient(r,owner);correct=d['done'].get(receiver)=='correct'
             results.append(dict(owner=r['players'][owner]['name'],guesser=r['players'][receiver]['name'],title=song['title'],artist=song['artist'],correct=correct,result=d['done'].get(receiver,'skipped'),link='https://www.youtube.com/watch?v='+song['youtube_id'] if song.get('youtube_id') else song.get('link','')))
-        r['recap'].append(dict(round=r['round'],songs=results))
+        r.setdefault('recap',[]).append(dict(round=r['round'],mode='duel',songs=results))
         r.update(phase='reveal',deadline=0)
 
     def tick(self,r,now=None):
@@ -358,6 +363,7 @@ class Duel:
         d=r.get('duel');other=self.other(r,p)
         out={key:r[key] for key in ('code','phase','round','rounds','deadline','mode','game_mode','multi','genre','region','difficulty','base_difficulty','decade','score_max')}
         out.update(host=p==r['host'],serverTime=time.time(),stage=0,history=[],players=[dict(name=v['name'],score=v['score'],me=k==p,host=k==r['host'],submitted=bool(d and k in d['done']),picked=bool(d and k in d['songs']),clips_locked=bool(d and k in d['locked']),audio_ready=bool(d and k in d['ready'])) for k,v in r['players'].items()])
+        if r.get('game_mode')=='party':out.update(party_modes=r.get('party_modes',[]),anime_answer=r.get('anime_answer','song'),playlist_report=r.get('playlist_report'))
         if not d:return out
         own=d['songs'].get(p);target=d['songs'].get(other)
         public=dict(recipient=r['players'][d['outgoing'][p]]['name'],supplier=r['players'][d['incoming'][p]]['name'],generation=d['generation'],positions=d['positions'].get(p,[]),revision=d['revisions'].get(p,0),locked=p in d['locked'],ready=p in d['ready'],done=d['done'].get(p),feedback=d['feedback'].get(p,''),attempts=d['attempts'].get(p,0),starts_at=d['starts_at'],error=d.get('error',''))

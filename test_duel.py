@@ -74,6 +74,76 @@ class DuelHTTPTests(HTTPGameTests):
    view=self.post('duel-next',a);self.assertEqual(view['phase'],'picking')
    self.pick(a,0);self.pick(b,1);self.assertEqual(self.state(a)['phase'],'clips')
 
+ def test_party_duel_transitions_both_directions_shared_scores_history_and_rematch(self):
+  from test_variety import fixture_tracks
+  rows=fixture_tracks()
+  with patch.object(s,'pool',return_value=rows),patch.object(s,'queue_credit'),patch.object(s,'reserve_next_round') as reserve:
+   for order in (['duel','choice'],['choice','duel']):
+    a=self.post('create',dict(mode='party',party_modes=['duel','choice'],multi=True,name='Alice',rounds=2,genre='Mixed',region='Europe',difficulty='Easy'))
+    self.created.append(a['room']);b=self.post('join',dict(room=a['room'],name='Bob'))
+    room=s.rooms[a['room']];room['party_cycle']=list(reversed(order));self.post('next',a)
+    for index,mode in enumerate(order):
+     view=self.state(a);self.assertEqual(view['mode'],mode);self.assertEqual(view['game_mode'],'party')
+     if mode=='duel':
+      before=lb.played_song_ids(['Alice','Bob'])
+      self.pick(a,0);self.pick(b,1);self.clips(a,[0,10,20,30,40]);self.clips(b,[0,10,20,30,40]);self.act(a,'ready');self.act(b,'ready');self.clock+=2
+      self.act(a,'guess',guess='Song B');self.act(b,'guess',guess='Song A')
+      self.assertEqual(before,lb.played_song_ids(['Alice','Bob']))
+      self.assert_http_error(lambda:self.post('duel-next',b))
+      view=self.post('duel-next',a)
+     else:
+      for player in (a,b):self.post('guess',dict(**player,round=room['round'],stage=0,id=room['song']['id']))
+      view=self.post('next',a)
+    self.assertEqual(view['phase'],'finished');self.assertEqual(view['game_mode'],'party');self.assertEqual(view['score_max'],2)
+    self.assertEqual([p['score'] for p in view['players']],[2,2]);self.assertEqual([item['mode'] for item in view['recap']],order)
+    self.assertEqual(len(lb.leaderboard('party','Easy',True)),2);self.assertFalse(lb.leaderboard('duel','Duel',True))
+    lobby=self.post('lobby',a);self.assertEqual(lobby['mode'],'party');self.assertEqual(lobby['round'],0)
+    self.assertEqual(set(lobby['party_modes']),{'duel','choice'});self.assertTrue(all(p['score']==0 for p in lobby['players']))
+
+ def test_party_duel_only_no_catalog_prefetch_or_repeat_history_and_error_skip(self):
+  self.assert_http_error(lambda:self.post('create',dict(mode='party',party_modes=['duel'],multi=False,name='Alice')))
+  a=self.post('create',dict(mode='party',party_modes=['duel'],multi=True,name='Alice',rounds=1));self.created.append(a['room'])
+  self.assert_http_error(lambda:self.post('next',a))
+  b=self.post('join',dict(room=a['room'],name='Bob'))
+  view=self.post('next',a);self.assertEqual(view['mode'],'duel');room=s.rooms[a['room']]
+  self.assertIsNone(room['_next_round'] if '_next_round' in room else None)
+  # Media failure retries remain a single Party round, and skipping it finishes the match.
+  room['phase']='duel-error';room['duel']['error']='Fixture media failed'
+  self.post('duel-retry',a);self.assertEqual(room['round'],1);self.assertEqual(room['score_max'],1)
+  room['phase']='duel-error';room['duel']['error']='Fixture media failed'
+  done=self.post('duel-next',a);self.assertEqual(done['phase'],'finished');self.assertEqual(done['mode'],'party')
+  self.assertEqual(done['recap'][0]['mode'],'duel');self.assertFalse(lb.played_song_ids(['Alice','Bob']))
+  self.post('lobby',a)
+  changed=self.post('settings',dict(**a,mode='party',party_modes=['duel'],rounds=2))
+  self.assertEqual(changed['party_modes'],['duel'])
+  self.post('next',a);self.assertIsNone(room['_next_round']['song']);self.assertIsNone(room['_next_round']['future'])
+  self.clock+=31;self.state(a);self.post('duel-next',a)
+  self.assertEqual(room['round'],2);self.assertEqual(room['mode'],'duel');self.assertEqual(room['score_max'],2)
+
+ def test_party_reserves_duel_without_selecting_catalog_song(self):
+  from test_variety import fixture_tracks
+  a=self.post('create',dict(mode='party',party_modes=['duel'],multi=True,name='Alice',rounds=3));self.created.append(a['room'])
+  room=s.rooms[a['room']];self.post('join',dict(room=a['room'],name='Bob'));self.post('join',dict(room=a['room'],name='Carol'))
+  with patch.object(s,'choose_song',side_effect=AssertionError('No catalog song during Duel')):
+   self.post('next',a);first=dict(room['duel']['incoming']);self.clock+=31;self.state(a);self.post('duel-next',a)
+   self.assertNotEqual(room['duel']['incoming'],first);self.assertEqual(room['duel_round'],2)
+   self.assertEqual(room['round'],2);self.assertEqual(room['score_max'],2)
+
+ def test_party_prefetch_transitions_reserve_duel_and_resume_catalog(self):
+  from test_variety import fixture_tracks
+  with patch.object(s,'pool',return_value=fixture_tracks()),patch.object(s,'queue_credit'):
+   a=self.post('create',dict(mode='party',party_modes=['choice','duel'],multi=True,name='Alice',rounds=3,genre='Mixed',region='Europe',difficulty='Easy'));self.created.append(a['room'])
+   b=self.post('join',dict(room=a['room'],name='Bob'));room=s.rooms[a['room']];room['party_cycle']=['duel','choice']
+   self.post('next',a);self.assertEqual(room['mode'],'choice');self.assertIsNone(room['_next_round']['song'])
+   for player in (a,b):self.post('guess',dict(**player,round=1,stage=0,id=room['song']['id']))
+   self.post('next',a);self.assertEqual(room['mode'],'duel');self.assertEqual(room['round'],2)
+   # Force a normal mode in the next shuffled cycle, including its actual reservation.
+   room['party_cycle']=['choice'];s.reserve_next_round(room)
+   self.assertIsNotNone(room['_next_round']['song']);self.assertEqual(room['_next_round']['selection']['mode'],'choice')
+   self.clock+=31;self.state(a);self.post('duel-next',a)
+   self.assertEqual(room['mode'],'choice');self.assertEqual(room['round'],3);self.assertEqual(room['score_max'],3)
+   self.assertEqual(len(room['used']),2);self.assertEqual(len(lb.played_song_ids(['Alice'])),4)
+
  def test_online_only_two_to_eight_and_host_controls(self):
   self.assert_http_error(lambda:self.post('create',dict(mode='duel',multi=False,name='Alice')))
   a=self.post('create',dict(mode='duel',multi=True,name='Alice',rounds=3));self.created.append(a['room'])

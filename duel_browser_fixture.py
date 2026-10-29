@@ -18,7 +18,9 @@ def main():
     def load(song,audio_only):
         name=song['title'][-1];path,length=audio[name]
         return 'abcdefghij'+name,song['title'],path,length,'audio/mp4'
+    s.random.shuffle=lambda values:None
     s.DUEL.fetch=search;s.DUEL.load_media=load
+    s.audio_cache.get=lambda *args:(pathlib.Path(audio['A'][0]).read_bytes(),'audio/mp4')
     s.pool=lambda *args:[dict(t,hot_hit=True) for t in fixture_tracks()]
     s.queue_credit=lambda *args:None
     def no_preview(*args):raise ValueError('Use fixture audio')

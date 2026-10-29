@@ -51,6 +51,7 @@ async function create(multi){
  if(chosenMode==='duel'){if(!multi){error(Error('Song Duel is online only. Create a room and invite one friend.'));return}await action('create',{mode:'duel',multi:true,name,rounds:+$('#rounds').value});return}
  if(custom&&!playlist){$('#error').textContent='Paste a playlist link to start.';$('#playlist-url').focus();return}
  const party_modes=[...document.querySelectorAll('#party-settings input:checked')].map(x=>x.value);
+ if(chosenMode==='party'&&party_modes.includes('duel')&&!multi){error(Error('Song Duel in Party mode is online only. Create a room and invite friends.'));return}
  if(chosenMode==='party'&&!party_modes.length){$('#error').textContent='Choose at least one Party mode.';return}
  const generation=++importGeneration;
  $('#solo').disabled=$('#create').disabled=true;$('#solo').textContent=custom?'Preparing playlist…':'Preparing full mix…';
@@ -59,7 +60,7 @@ async function create(multi){
   const payload={mode:chosenMode,party_modes,playlist_url:playlist,multi,name,genre:$('#genre').value,region:$('#region').value,difficulty:$('#difficulty').value,decade:custom?'All':$('#decade').value,anime_answer:$('#anime-answer').value,rounds:+$('#rounds').value};
   const settings=chosenMode==='hits'?{genre:'Mixed',region:'Worldwide',difficulty:'Hits',decade:payload.decade}:{genre:payload.genre,region:payload.region,difficulty:payload.difficulty,decade:payload.decade};
   $('#playlist-progress').hidden=false;$('#playlist-cancel').hidden=false;$('#playlist-progress-bar').removeAttribute('value');$('#playlist-progress-label').textContent=custom?'Reading playlist…':'Preparing your mix…';$('#playlist-progress-count').textContent='This can take a little while';
-  await waitForPreparation(custom?'playlist':'catalog',custom?{url:playlist}:settings,generation);
+  if(!(chosenMode==='party'&&party_modes.length===1&&party_modes[0]==='duel'))await waitForPreparation(custom?'playlist':'catalog',custom?{url:playlist}:settings,generation);
   if(generation!==importGeneration)return;
   await action('create',payload);
  }catch(e){if(generation===importGeneration)error(e)}
@@ -110,9 +111,9 @@ async function refresh(){if(!session||polling)return;polling=true;try{const acti
 function correctPlayersMessage(){if(!state.multi||state.phase!=='reveal')return '';const names=state.correct_players||[];return names.length?names.join(' & ')+' got it right!':'Nobody got it right.'}
 function render(){
  if(state?.mode==='duel'&&state.phase!=='lobby'){
-  if(mode!=='duel'){mode='duel';document.querySelectorAll('.mode').forEach(button=>button.classList.toggle('selected',button.dataset.mode==='duel'));updateModeSelection()}
+  const selected=state.game_mode==='party'?'party':'duel';if(mode!==selected){mode=selected;document.querySelectorAll('.mode').forEach(button=>button.classList.toggle('selected',button.dataset.mode===selected));updateModeSelection()}
   $('#invite').hidden=true;$('#home').hidden=true;$('#game').hidden=false;document.body.classList.add('in-game');$('#game').dataset.mode='duel';$('#game').classList.toggle('duel-group',state.players.length>2);$('#game').dataset.phase=state.phase;$('#game').classList.remove('finished');$('#wrapup').hidden=true;renderRaceVideo();if(last!=='duel'){stop();last='duel'}
-  $('#roundLabel').textContent='ROOM '+state.code+' / '+(state.round||'LOBBY')+(state.round?' OF '+state.rounds:'');
+  $('#roundLabel').textContent=(state.game_mode==='party'?'PARTY · ':'')+'ROOM '+state.code+' / '+(state.round||'LOBBY')+(state.round?' OF '+state.rounds:'');
   $('#scores').innerHTML=state.players.map(p=>'<span class="score"><span class="duel-score-name" title="'+esc(p.name)+'">'+esc(p.name)+(p.me?' · you':'')+(p.submitted?' ✓':'')+'</span><b>'+p.score+'</b></span>').join('');
   window.dispatchEvent(new CustomEvent('needle:screen',{detail:{home:false}}));
   window.NeedleDuel.render(state,{api,error,session,getSession:()=>session,before:()=>mutationEpoch++,apply:value=>{if(state?.mode==='duel'&&value.serverTime<state.serverTime)return;mutationEpoch++;state=value;render()},goHome});return;
@@ -251,8 +252,9 @@ $('#lobby-save').onclick=async()=>{
  if(custom&&!url){error(Error('Enter a playlist URL.'));return}if(gameMode==='party'&&!party.length){error(Error('Choose at least one Party mode.'));return}
  const payload={mode:gameMode,party_modes:party,playlist_url:url,genre:$('#lobby-genre').value,region:$('#lobby-region').value,difficulty:$('#lobby-difficulty').value,decade:custom?'All':$('#lobby-decade').value,anime_answer:$('#lobby-anime-answer').value,rounds:+$('#lobby-rounds').value};
  const params=gameMode==='hits'?{genre:'Mixed',region:'Worldwide',difficulty:'Hits',decade:payload.decade}:{genre:payload.genre,region:payload.region,difficulty:payload.difficulty,decade:payload.decade};
+ if(gameMode==='party'&&party.includes('duel')&&!state.multi){error(Error('Song Duel in Party mode is online only.'));return}
  const gen=++lobbyGeneration;$('#lobby-save').disabled=true;$('#next').disabled=true;$('#lobby-progress').hidden=false;$('#error').textContent='';
- try{if(gameMode!=='duel'){const job=await api(custom?'playlist-prepare':'catalog-prepare',custom?{url}:params);while(gen===lobbyGeneration){const progress=await api((custom?'playlist-status':'catalog-status')+'?job='+encodeURIComponent(job.job));if(gen!==lobbyGeneration)return;if(progress.phase==='error')throw Error(progress.error||'Preparation failed');if(progress.phase==='ready')break;$('#lobby-progress-label').textContent=progress.phase==='matching'?'Matching songs…':progress.phase==='artists'?'Finding artists and songs…':progress.phase==='dates'?'Checking release dates…':'Preparing your mix…';const bar=$('#lobby-progress-bar');if(progress.total>0)bar.value=Math.min(99,Math.round(100*progress.completed/progress.total));else bar.removeAttribute('value');await new Promise(resolve=>setTimeout(resolve,1000))}}if(gen!==lobbyGeneration)return;const v=await api('settings',{...session,...payload});if(gen!==lobbyGeneration)return;mutationEpoch++;state=v;lobbyInitialized=false;lobbyDirty=false;render();}catch(e){if(gen===lobbyGeneration)error(e)}finally{if(gen===lobbyGeneration){$('#lobby-progress').hidden=true;$('#lobby-save').disabled=false;$('#next').disabled=false}}
+ try{if(gameMode!=='duel'&&!(gameMode==='party'&&party.length===1&&party[0]==='duel')){const job=await api(custom?'playlist-prepare':'catalog-prepare',custom?{url}:params);while(gen===lobbyGeneration){const progress=await api((custom?'playlist-status':'catalog-status')+'?job='+encodeURIComponent(job.job));if(gen!==lobbyGeneration)return;if(progress.phase==='error')throw Error(progress.error||'Preparation failed');if(progress.phase==='ready')break;$('#lobby-progress-label').textContent=progress.phase==='matching'?'Matching songs…':progress.phase==='artists'?'Finding artists and songs…':progress.phase==='dates'?'Checking release dates…':'Preparing your mix…';const bar=$('#lobby-progress-bar');if(progress.total>0)bar.value=Math.min(99,Math.round(100*progress.completed/progress.total));else bar.removeAttribute('value');await new Promise(resolve=>setTimeout(resolve,1000))}}if(gen!==lobbyGeneration)return;const v=await api('settings',{...session,...payload});if(gen!==lobbyGeneration)return;mutationEpoch++;state=v;lobbyInitialized=false;lobbyDirty=false;render();}catch(e){if(gen===lobbyGeneration)error(e)}finally{if(gen===lobbyGeneration){$('#lobby-progress').hidden=true;$('#lobby-save').disabled=false;$('#next').disabled=false}}
 };
 
 setInterval(refresh,1000);refresh();
@@ -269,6 +271,7 @@ function renderFinal(){
  const recap=state.recap||[];const matchKey=session?.room+':'+JSON.stringify(state.recap||[]);if(recapMatch!==matchKey){recapPage=0;recapMatch=matchKey}recapPage=Math.max(0,Math.min(recapPage,recap.length-1));
  const allowedLink=value=>/^https:\/\//i.test(value||'')?esc(value):'';
  $('#recap-list').innerHTML=recap.slice(recapPage,recapPage+1).map(item=>{
+  if(item.mode==='duel')return '<li><span class="recap-number">'+Number(item.round)+'</span><div><strong>Song Duel</strong>'+((item.songs||[]).map(song=>'<span>'+esc(song.title)+' · '+esc(song.artist)+'</span><small>'+esc(song.owner)+' → '+esc(song.guesser)+(song.correct?' · Correct':' · '+esc(song.result||'Skipped'))+'</small>').join('')||'<small>No songs submitted</small>')+'</div></li>';
   const winners=(item.winners||[]).map(w=>esc(w.name)+' · '+Number(w.seconds).toFixed(1)+'s').join(' / ')||'Nobody guessed it';
   const deezer=allowedLink(item.link),spotify=allowedLink(item.spotify_url);
   const links=(deezer?'<a href="'+deezer+'" target="_blank" rel="noopener">Deezer ↗</a>':'')+(spotify?'<a href="'+spotify+'" target="_blank" rel="noopener">Spotify ↗</a>':'');
