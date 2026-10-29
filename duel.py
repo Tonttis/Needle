@@ -1,4 +1,4 @@
-"""Two-player, private-song duel. All clocks and permissions live on the server."""
+"""Private-song duels for 2–8 players. Server-owned clocks, assignments and answers."""
 import copy,json,math,pathlib,re,secrets,subprocess,threading,time,urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
@@ -10,6 +10,7 @@ PICK_SECONDS=30
 CLIP_SECONDS=30
 GUESS_SECONDS=45
 CLIP_LENGTH=5
+MAX_PLAYERS=8
 
 
 def youtube_id(value):
@@ -60,7 +61,7 @@ def fill_positions(chosen,duration):
         value=round(end*i/100,3)
         if all(abs(value-old)>.001 for old in values):values.append(value)
     while len(values)<5:values.append(end)
-    return values[:5]
+    return sorted(values[:5])
 
 
 def cut_clip(path,start,length=CLIP_LENGTH):
@@ -86,7 +87,7 @@ class Duel:
         threading.Thread(target=run,daemon=True,name='duel-clock').start()
 
     def create(self,name,multi,rounds):
-        if multi is not True:raise ValueError('Song Duel is online only and needs exactly two players.')
+        if multi is not True:raise ValueError('Song Duel is online only and needs at least two players.')
         if isinstance(rounds,bool):raise ValueError('Invalid round count')
         rounds=max(1,min(30,int(rounds)))
         with self.lock:
@@ -101,7 +102,11 @@ class Duel:
                 genre='Anything',region='Worldwide',difficulty='Duel',base_difficulty='Duel',decade='All',score_max=0,recap=[],duel=None)
             return dict(room=code,token=token)
 
-    def other(self,r,p):return next((key for key in r['players'] if key!=p),None)
+    def other(self,r,p):
+        # The owner of this player's incoming song; never expose their token.
+        return (r.get('duel') or {}).get('incoming',{}).get(p)
+
+    def recipient(self,r,p):return (r.get('duel') or {}).get('outgoing',{}).get(p)
 
     def authenticate(self,code,token):
         r=self.rooms.get(str(code).upper())
@@ -110,10 +115,13 @@ class Duel:
         return r
 
     def begin(self,r,retry=False):
-        if len(r['players'])!=2:raise ValueError('Song Duel needs exactly two players before starting.')
+        if not 2<=len(r['players'])<=MAX_PLAYERS:raise ValueError('Song Duel needs 2–8 players before starting.')
         if not retry:r['round']+=1;r['score_max']+=1
         r.update(phase='picking',deadline=time.time()+PICK_SECONDS)
-        r['duel']=dict(generation=secrets.token_urlsafe(16),songs={},candidates={p:{} for p in r['players']},positions={},revisions={},locked=set(),ready=set(),done={},feedback={},attempts={},clips={},clip_keys={},clip_pending=set(),recorded=set(),starts_at=0)
+        players=list(r['players']);offset=1+(r['round']-1)%(len(players)-1)
+        outgoing={p:players[(i+offset)%len(players)] for i,p in enumerate(players)}
+        incoming={receiver:owner for owner,receiver in outgoing.items()}
+        r['duel']=dict(incoming=incoming,outgoing=outgoing,generation=secrets.token_urlsafe(16),songs={},candidates={p:{} for p in r['players']},positions={},revisions={},locked=set(),ready=set(),done={},feedback={},attempts={},clips={},clip_keys={},clip_pending=set(),recorded=set(),starts_at=0)
 
     def candidate(self,raw):
         track=self.clean(raw)
@@ -204,11 +212,16 @@ class Duel:
     def start_clips(self,r,now):
         d=r['duel'];r.update(phase='clips',deadline=now+CLIP_SECONDS)
         for p in r['players']:
-            if self.other(r,p) not in d['songs']:d['done'][p]='no-song';d['locked'].add(p)
+            if p not in d['songs']:d['done'][p]='no-pick'
+            elif self.other(r,p) not in d['songs']:
+                d['done'][p]='forfeit-win';r['players'][p]['score']+=1
+                note=r['players'][self.other(r,p)]['name']+' did not choose a song. '+r['players'][p]['name']+' wins by forfeit (+1).'
+                d['notice']=(d.get('notice','')+' '+note).strip()
+            if p in d['done']:d['locked'].add(p)
             d['positions'][p]=[];d['revisions'][p]=0
 
     def prepare_clips(self,r,now):
-        d=r['duel'];r.update(phase='preparing-clips',deadline=0);d['media_deadline']=now+65
+        d=r['duel'];r.update(phase='preparing-clips',deadline=0);d['media_deadline']=now+120*math.ceil(len(r['players'])/4)
         active=[p for p in r['players'] if p not in d['done']]
         if not active:self.finish(r);return
         d['clip_pending'].update(active)
@@ -252,7 +265,7 @@ class Duel:
         if r['phase']=='reveal':return
         results=[]
         for owner,song in d['songs'].items():
-            receiver=self.other(r,owner);correct=d['done'].get(receiver)=='correct'
+            receiver=self.recipient(r,owner);correct=d['done'].get(receiver)=='correct'
             results.append(dict(owner=r['players'][owner]['name'],guesser=r['players'][receiver]['name'],title=song['title'],artist=song['artist'],correct=correct,result=d['done'].get(receiver,'skipped'),link='https://www.youtube.com/watch?v='+song['youtube_id'] if song.get('youtube_id') else song.get('link','')))
         r['recap'].append(dict(round=r['round'],songs=results))
         r.update(phase='reveal',deadline=0)
@@ -264,19 +277,13 @@ class Duel:
         for _ in range(7):
             phase=r['phase']
             if phase=='picking':
-                if now<r['deadline'] and len(d['songs'])<2:return
-                r.update(phase='preparing',deadline=0);d['media_deadline']=now+175
+                if now<r['deadline'] and len(d['songs'])<len(r['players']):return
+                r.update(phase='preparing',deadline=0);d['media_deadline']=now+175*max(1,math.ceil(len(d['songs'])/4))
             elif phase=='preparing':
                 if any(song['status']=='error' for song in d['songs'].values()) or now>=d['media_deadline']:
                     d['error']='A selected song could not load. Retry picking or skip this round.';r.update(phase='duel-error',deadline=0);return
                 if any(song['status']=='loading' for song in d['songs'].values()):return
                 if not d['songs']:self.finish(r);return
-                if len(d['songs'])==1:
-                    owner=next(iter(d['songs']));missing=self.other(r,owner)
-                    d['done'].update({owner:'forfeit-win',missing:'no-pick'})
-                    r['players'][owner]['score']+=1
-                    d['notice']=r['players'][missing]['name']+' did not choose a song. '+r['players'][owner]['name']+' wins this round by forfeit (+1).'
-                    self.finish(r);return
                 self.start_clips(r,now)
             elif phase=='clips':
                 if now<r['deadline'] and not all(p in d['locked'] for p in r['players']):return
@@ -291,12 +298,12 @@ class Duel:
                 if not active:self.finish(r);return
                 if active<=d['ready']:self.start_guessing(r,now)
                 elif now>=r['deadline']:
-                    d['error']='Both players need to load their clips. Check the connection and retry.';r.update(phase='duel-error',deadline=0)
+                    d['error']='All active players need to load their clips. Check the connection and retry.';r.update(phase='duel-error',deadline=0)
                 return
             elif phase=='playing':
                 if now>=r['deadline']:
                     for p in r['players']:d['done'].setdefault(p,'timeout')
-                if len(d['done'])==2:self.finish(r)
+                if len(d['done'])==len(r['players']):self.finish(r)
                 return
             else:return
 
@@ -335,7 +342,7 @@ class Duel:
             if p in d['locked']:raise ValueError('Clip picking is locked.')
             end=d['songs'][self.other(r,p)]['duration']-CLIP_LENGTH
             if any(isinstance(x,bool) or not isinstance(x,(float,int)) or not math.isfinite(x) or not 0<=x<=end+.001 for x in positions):raise ValueError('Every five-second clip must stay inside the song.')
-            if revision>d['revisions'].get(p,0):d['positions'][p]=[min(end,float(x)) for x in positions];d['revisions'][p]=revision
+            if revision>d['revisions'].get(p,0):d['positions'][p]=sorted(min(end,float(x)) for x in positions);d['revisions'][p]=revision
             if payload.get('locked'):
                 if len(d['positions'][p])!=5:raise ValueError('Choose five clips before locking them.')
                 d['locked'].add(p)
@@ -363,7 +370,7 @@ class Duel:
         out.update(host=p==r['host'],serverTime=time.time(),stage=0,history=[],players=[dict(name=v['name'],score=v['score'],me=k==p,host=k==r['host'],submitted=bool(d and k in d['done']),picked=bool(d and k in d['songs']),clips_locked=bool(d and k in d['locked']),audio_ready=bool(d and k in d['ready'])) for k,v in r['players'].items()])
         if not d:return out
         own=d['songs'].get(p);target=d['songs'].get(other)
-        public=dict(generation=d['generation'],positions=d['positions'].get(p,[]),revision=d['revisions'].get(p,0),locked=p in d['locked'],ready=p in d['ready'],done=d['done'].get(p),feedback=d['feedback'].get(p,''),attempts=d['attempts'].get(p,0),starts_at=d['starts_at'],error=d.get('error',''))
+        public=dict(recipient=r['players'][d['outgoing'][p]]['name'],supplier=r['players'][d['incoming'][p]]['name'],generation=d['generation'],positions=d['positions'].get(p,[]),revision=d['revisions'].get(p,0),locked=p in d['locked'],ready=p in d['ready'],done=d['done'].get(p),feedback=d['feedback'].get(p,''),attempts=d['attempts'].get(p,0),starts_at=d['starts_at'],error=d.get('error',''))
         if d.get('notice'):public['notice']=d['notice']
         if own:public['picked']=dict(title=own['title'],artist=own['artist'],status=own['status'],error=own.get('error',''))
         if r['phase'] not in ('picking','preparing') and target and target.get('status')=='ready':public['duration']=target['duration']

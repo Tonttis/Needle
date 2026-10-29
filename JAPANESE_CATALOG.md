@@ -45,3 +45,30 @@ Representative primary sources used to corroborate artist/song/animation coverag
 Familiarity ratings are editorial judgments for genre fans, not claimed chart positions or measured listener recognition. These sources corroborate representative entries rather than certify the entire registry.
 
 Validation includes the full Python regression suite, all JavaScript regression checks, and focused tests in `test_japan_anime.py` for every tier's import, theme-only admission, exact Japanese aliases, bounded native lookup retry, legacy history compatibility, audience boundaries, and selection without early repeats. Provider responses in the new import tests are fixtures. Expanded live-provider coverage and browser playback were not verified from this environment.
+
+## V12.2 — choose what to guess
+
+When **Your rotation = Anime**, the home setup and host's lobby controls show **Anime answer**:
+
+- **Mode 1 · Song / artist** keeps the existing song-answer rules.
+- **Mode 2 · Anime title** accepts the anime's English title, listed Japanese romanization, or Japanese title. Suggestions show anime titles rather than song metadata. A typed answer can be submitted with the Guess anime button or Enter; selecting a suggestion submits it too. Multiple choice shows distinct anime titles. Video Race and eligible Party rounds use the same anime-answer setting and retain their existing timing and scoring rules.
+
+`anime_series.tsv` maps every one of the current registry's 166 series credits to English, romaji, Japanese, and explicitly accepted alternate titles. Related seasons/arcs are grouped where the main series title is a valid answer. Original catalog names remain accepted. Separate adaptations with shared parent titles never appear together as competing choices. Selecting a suggestion has the same meaning as submitting its displayed title.
+
+Matching uses Unicode NFKC, case folding, optional punctuation/spacing, full-width Latin normalization, and katakana/hiragana equivalence. Kanji remain significant; partial anime names, unrelated titles, song IDs, and artist names cannot bypass the title check. Accepted abbreviated names are explicitly listed rather than guessed by fuzzy matching. Japanese phonetic readings that are not listed are not automatically transliterated into kanji.
+
+Japanese IME composition does not trigger searches on incomplete text or submit a guess when Enter confirms a conversion. Committed text can be searched normally; the next Enter submits. Mobile keyboard layout keeps the answer form visible. A bundled Noto Sans JP fallback supplies Japanese glyphs without requiring a font service or a Japanese system font. Its Unicode subsets load only when needed and use versioned, cacheable URLs; see `static/fonts/NotoSansJP-LICENSE.txt` (SIL OFL 1.1).
+
+All answer matching and suggestions use startup-loaded metadata. This adds no provider requests, media downloads, catalog builds, or database migrations to the guessing path. Song selection, difficulty calibration, persistent name-based song history, and existing mode/difficulty leaderboards continue to use the underlying song and match. Lobby settings survive a rematch in the same room. As with the other lobby settings, active rooms remain in server memory.
+
+The aliases are editorial metadata. Representative English/romaji/native title checks used AniList's own catalog entries and official series sites:
+
+- Frieren official site: https://frieren-anime.jp/onair/
+- Frieren catalog: https://anilist.co/anime/154587/Sousou-no-Frieren/
+- The Apothecary Diaries official site: https://kusuriyanohitorigoto.jp/season1/index.html
+- Akashic Records: https://anilist.co/anime/21700/
+- Destiny of the Shrine Maiden: https://anilist.co/anime/143/kannazuki-no-miko
+- Doraemon's Earth Symphony: https://anilist.co/anime/166976/Doraemon-Nobita-no-Chikyuu-Symphony
+- Regalia: https://anilist.co/anime/21707/Regalia-The-Three-Sacred-Stars/
+
+`test_anime_answers.py` checks every registered theme's multilingual aliases, normalization, ambiguous choices, HTTP scoring, server validation, search, lobby authorization, rematches, history, and Video Race cooldowns. Optional `test_anime_browser.cjs` uses a localhost fixture with generated audio to check English/Japanese input, IME composition, suggestions, mobile keyboard layout, font loading, refresh, and normal song-mode behavior. It does not test an operating system's physical Japanese keyboard or live-provider availability.

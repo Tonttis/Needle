@@ -6,7 +6,7 @@ class Select{
  set innerHTML(html){this.options=[...html.matchAll(/<option( disabled)?>(.*?)<\/option>/g)].map(m=>({value:m[2].replace(/&amp;/g,'&'),disabled:!!m[1]}));this.value=this.options.find(o=>!o.disabled)?.value||'';}
  addEventListener(event,fn){this.listeners[event]=fn;}
 }
-const elements={'#region':new Select('Worldwide'),'#genre':new Select('Mixed'),'#difficulty':new Select('Easy'),'#decade':new Select('All'),'#solo':{},'#create':{},'#mix-help':{}};
+const elements={'#anime-answer-field':{},'#region':new Select('Worldwide'),'#genre':new Select('Mixed'),'#difficulty':new Select('Easy'),'#decade':new Select('All'),'#solo':{},'#create':{},'#mix-help':{}};
 const scope={mode:'guess',$:id=>elements[id],esc:s=>s.replace(/&/g,'&amp;'),api:async path=>{assert.equal(path,'config');return config},setTimeout:()=>1,clearTimeout(){},URLSearchParams,error:e=>{throw e}};
 vm.createContext(scope);const code=fs.readFileSync('static/app.js','utf8');vm.runInContext(code.slice(code.indexOf('let warmTimer,mixConfig;')),scope);
 setImmediate(()=>{try{

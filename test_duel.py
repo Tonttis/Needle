@@ -52,14 +52,16 @@ class DuelHTTPTests(HTTPGameTests):
   return a,b
  def assert_http_error(self,fn):
   with self.assertRaises(urllib.error.HTTPError):fn()
- def test_online_only_exactly_two_and_host_controls(self):
+ def test_online_only_two_to_eight_and_host_controls(self):
   self.assert_http_error(lambda:self.post('create',dict(mode='duel',multi=False,name='Alice')))
   a=self.post('create',dict(mode='duel',multi=True,name='Alice',rounds=3));self.created.append(a['room'])
   self.assert_http_error(lambda:self.post('duel-next',a))
-  invite=self.get('invite?room='+a['room']);self.assertTrue(invite['joinable']);self.assertEqual(invite['max_players'],2)
+  invite=self.get('invite?room='+a['room']);self.assertTrue(invite['joinable']);self.assertEqual(invite['max_players'],8)
   b=self.post('join',dict(room=a['room'],name='Bob'))
+  self.assertTrue(self.get('invite?room='+a['room'])['joinable'])
+  for i in range(6):self.post('join',dict(room=a['room'],name='Extra '+str(i)))
   self.assertFalse(self.get('invite?room='+a['room'])['joinable'])
-  self.assert_http_error(lambda:self.post('join',dict(room=a['room'],name='Third')))
+  self.assert_http_error(lambda:self.post('join',dict(room=a['room'],name='Ninth')))
   self.assert_http_error(lambda:self.post('duel-next',b))
   self.assertEqual(self.post('duel-settings',dict(**a,rounds=5))['rounds'],5)
   self.assert_http_error(lambda:self.post('duel-settings',dict(**b,rounds=1)))
@@ -88,6 +90,63 @@ class DuelHTTPTests(HTTPGameTests):
    self.assertEqual(clip.call_args.args[-1],10)
   self.post('duel-next',a);self.post('duel-lobby',a)
   self.assertRaises(ValueError,lambda:s.DUEL.preview_song(a['room'],a['token'],0,1,generation))
+ def test_clip_numbers_are_chronological_in_saved_state_and_encoded_audio(self):
+  a,b,_=self.room();self.pick(a,0);self.pick(b,1)
+  first=self.act(a,'clips',positions=[80,10,40],revision=1,locked=False)
+  self.assertEqual(first['duel']['positions'],[10,40,80])
+  self.act(a,'clips',positions=[100,0,20,80,40],revision=2,locked=True)
+  self.clips(b,[75,5,55,25,95]);av=self.state(a);bv=self.state(b)
+  self.assertEqual(av['duel']['positions'],[0,20,40,80,100]);self.assertEqual(bv['duel']['positions'],[5,25,55,75,95])
+  room=s.rooms[a['room']];dstate=room['duel']
+  for player in (a,b):
+   token=player['token']
+   for index,start in enumerate(dstate['positions'][token]):self.assertTrue(dstate['clips'][token][index].endswith((':'+str(start)).encode()))
+ def group(self,count,rounds=2):
+  host=self.post('create',dict(mode='duel',multi=True,name='Player 1',rounds=rounds));self.created.append(host['room'])
+  players=[host]+[self.post('join',dict(room=host['room'],name='Player '+str(i+1))) for i in range(1,count)]
+  self.post('duel-next',host);return players
+ def test_assignments_rotate_without_self_picks_for_every_group_size(self):
+  for count in range(2,9):
+   players=self.group(count,count-1);host=players[0];seen={p['token']:set() for p in players}
+   for round_number in range(1,count):
+    room=s.rooms[host['room']];assignment=room['duel']['outgoing'];self.assertEqual(len(set(assignment.values())),count)
+    for owner,receiver in assignment.items():self.assertNotEqual(owner,receiver);self.assertNotIn(receiver,seen[owner]);seen[owner].add(receiver)
+    before=dict(assignment);self.clock+=31;self.assertEqual(self.state(host)['phase'],'reveal')
+    if round_number<count-1:self.post('duel-next',host)
+   self.assertTrue(all(len(value)==count-1 for value in seen.values()))
+ def test_group_lifecycle_private_history_ready_gate_and_persistent_scores(self):
+  for count in (3,4,8):
+   players=self.group(count);host=players[0]
+   for index,player in enumerate(players):
+    self.pick(player,index%2)
+    if index<count-1:self.assertEqual(self.state(host)['phase'],'picking')
+   room=s.rooms[host['room']];incoming=dict(room['duel']['incoming'])
+   for player in players:
+    self.assertEqual(self.state(player)['duel']['supplier'],room['players'][incoming[player['token']]]['name'])
+    self.clips(player,[90,10,70,30,50])
+   for player in players[:-1]:self.assertEqual(self.act(player,'ready')['phase'],'loading')
+   self.assertEqual(self.act(players[-1],'ready')['phase'],'playing');self.clock+=2
+   for index,player in enumerate(players):
+    token=player['token'];target=room['duel']['songs'][incoming[token]]
+    own_key=room['duel']['clip_keys'][token]
+    with self.assertRaises(ValueError):s.DUEL.clip(host['room'],players[(index+1)%count]['token'],own_key,0,1)
+    self.assertIn(target['id'],lb.played_song_ids([room['players'][token]['name']]))
+    view=self.act(player,'guess',guess=target['title'])
+    self.assertEqual(view['phase'],'reveal' if index==count-1 else 'playing')
+   self.assertEqual(len(view['duel']['answers']),count);self.assertTrue(all(p['score']==1 for p in view['players']))
+   self.post('duel-next',host);self.assertNotEqual(s.rooms[host['room']]['duel']['incoming'],incoming)
+   self.clock+=31;self.state(host);self.assertEqual(self.post('duel-next',host)['phase'],'finished')
+   self.assertEqual(len(lb.leaderboard('duel','Duel',True)),count)
+ def test_partial_group_missing_pick_awards_only_recipient_and_others_continue(self):
+  players=self.group(4);a,b,c,missing=players
+  self.pick(a,0);self.pick(b,1);self.pick(c,0);self.clock+=31
+  view=self.state(a);self.assertEqual(view['phase'],'clips');self.assertEqual(view['duel']['done'],'forfeit-win')
+  self.assertEqual(self.state(missing)['duel']['done'],'no-pick')
+  self.clips(b,[0,10,20,30,40]);self.clips(c,[0,10,20,30,40]);self.act(b,'ready');self.act(c,'ready');self.clock+=2
+  self.act(b,'guess',guess='Song A');view=self.act(c,'skip')
+  self.assertEqual(view['phase'],'reveal');self.assertEqual([p['score'] for p in view['players']],[1,1,0,0])
+  self.assertEqual([p['score'] for p in self.state(a)['players']],[1,1,0,0])
+  self.assertFalse(lb.played_song_ids(['Player 1','Player 4']))
  def test_complete_duel_private_clips_unlimited_guesses_scores_history_rematch(self):
   a,b,initial=self.room();generation=initial['duel']['generation']
   self.pick(a,0)
@@ -126,7 +185,7 @@ class DuelHTTPTests(HTTPGameTests):
   a,b,_=self.room();self.pick(a,0);self.pick(b,1)
   self.act(a,'clips',positions=[12.5],revision=1,locked=False)
   self.clock+=31;av=self.state(a);bv=self.state(b)
-  self.assertEqual(av['phase'],'loading');self.assertEqual(len(av['duel']['positions']),5);self.assertEqual(av['duel']['positions'][0],12.5)
+  self.assertEqual(av['phase'],'loading');self.assertEqual(len(av['duel']['positions']),5);self.assertIn(12.5,av['duel']['positions']);self.assertEqual(av['duel']['positions'],sorted(av['duel']['positions']))
   self.assertTrue(all(0<=x<=175 for x in av['duel']['positions']));self.assertTrue(all(0<=x<=115 for x in bv['duel']['positions']))
   self.act(a,'ready');self.act(b,'ready');self.clock+=47
   final=self.state(a);self.assertEqual(final['phase'],'reveal');self.assertTrue(all(not x['correct'] for x in final['duel']['answers']))
@@ -215,7 +274,7 @@ class DuelPureTests(unittest.TestCase):
  def test_autofill_keeps_manual_positions_and_stays_within_song(self):
   for duration in (5,5.1,30,201.4):
    for selected in ([],[0],[max(0,duration-5)],[0,0,0,0,0]):
-    filled=d.fill_positions(selected,duration);self.assertEqual(len(filled),5);self.assertEqual(filled[:len(selected)],selected);self.assertTrue(all(0<=x<=duration-5+.001 for x in filled))
+    filled=d.fill_positions(selected,duration);self.assertEqual(len(filled),5);self.assertTrue(all(value in filled for value in selected));self.assertEqual(filled,sorted(filled));self.assertTrue(all(0<=x<=duration-5+.001 for x in filled))
  @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'),'ffmpeg required for real media slicing')
  def test_actual_five_second_clips_strip_source_metadata(self):
   with tempfile.TemporaryDirectory() as tmp:
