@@ -18,6 +18,8 @@ def main():
         name=song['title'][-1];path,length=audio[name]
         return 'abcdefghij'+name,song['title'],path,length,'audio/mp4'
     s.DUEL.fetch=search;s.DUEL.load_media=load
+    def no_preview(*args):raise ValueError('Use fixture audio')
+    s.deezer_reveal_cache.get=no_preview
     original_time=time.time;offset=[0.]
     duel.time.time=lambda:original_time()+offset[0]
     class Handler(s.Handler):

@@ -63,8 +63,8 @@ def fill_positions(chosen,duration):
     return values[:5]
 
 
-def cut_clip(path,start):
-    result=subprocess.run(['ffmpeg','-nostdin','-v','error','-ss',str(start),'-i',str(path),'-t',str(CLIP_LENGTH),'-vn','-map_metadata','-1','-c:a','libmp3lame','-b:a','128k','-f','mp3','pipe:1'],capture_output=True,check=True,timeout=20)
+def cut_clip(path,start,length=CLIP_LENGTH):
+    result=subprocess.run(['ffmpeg','-nostdin','-v','error','-ss',str(start),'-i',str(path),'-t',str(length),'-vn','-map_metadata','-1','-c:a','libmp3lame','-b:a','128k','-f','mp3','pipe:1'],capture_output=True,check=True,timeout=20)
     if not result.stdout:raise ValueError('An audio clip could not be prepared.')
     return result.stdout
 
@@ -154,6 +154,27 @@ class Duel:
             entries=d['candidates'][p]
             while len(entries)>48:entries.pop(next(iter(entries)))
             return dict(round=r['round'],generation=generation,results=out)
+
+    def guess_search(self,code,p,query,round_number,generation):
+        if not isinstance(query,str) or not 2<=len(query.strip())<=100:raise ValueError('Enter at least two characters.')
+        def validate():
+            r=self.authenticate(code,p)
+            if r['phase']!='playing' or r['round']!=round_number or r['duel']['generation']!=generation or p in r['duel']['done']:raise ValueError('Guessing has ended.')
+        with self.lock:validate()
+        raw=self.fetch('search?limit=12&q='+urllib.parse.quote(query.strip())).get('data',[])
+        rows=[self.candidate(t) for t in raw if isinstance(t,dict) and t.get('id') and t.get('title') and t.get('artist')]
+        with self.lock:validate()
+        return dict(results=[dict(title=t['title'],artist=t['artist']) for t in rows[:12]])
+
+    def preview_song(self,code,p,index,round_number,generation):
+        with self.lock:
+            r=self.authenticate(code,p);d=r.get('duel')
+            if not d or r['phase'] not in ('reveal','finished') or r['round']!=round_number or d['generation']!=generation:raise ValueError('Previews are available after the round ends.')
+            songs=list(d['songs'].values())
+            if not isinstance(index,int) or not 0<=index<len(songs):raise ValueError('Preview unavailable.')
+            song=songs[index]
+            if song.get('status')!='ready':raise ValueError('Preview unavailable.')
+            return dict(song)
 
     def pick(self,r,p,payload):
         d=r['duel'];song=copy.deepcopy(d['candidates'][p].get(payload.get('selection')))

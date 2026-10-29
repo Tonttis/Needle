@@ -1,6 +1,7 @@
 /* Private per-player Song Duel UI. The server owns all phases, clocks and answers. */
 window.NeedleDuel=(()=>{
  let view,bridge,panel,key='',received=0,candidate=null,searchVersion=0,positions=[],revision=0;
+ let guessTimer,guessVersion=0,previewAbort,previewRun=0;
  let audioContext,gain,analyser,audioSource,buffers=[],bufferKey='',loadingKey='',loadingAbort,playVersion=0,animation,playing=-1,guessBusy=false,readyBusy=false;
  const el=id=>document.getElementById(id),escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const format=seconds=>{seconds=Math.max(0,Math.floor(Number(seconds)||0));return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')};
@@ -26,13 +27,13 @@ window.NeedleDuel=(()=>{
   catch(error){if(!stale(active,identity))bridge.error(error);return null}
  }
  function stop(){
-  playVersion++;cancelAnimationFrame(animation);playing=-1;
+  playVersion++;previewRun++;previewAbort?.abort();previewAbort=null;cancelAnimationFrame(animation);playing=-1;
   if(audioSource){audioSource.onended=null;try{audioSource.stop()}catch{}audioSource=null}
   document.body.classList.remove('is-playing');window.dispatchEvent(new CustomEvent('needle:audio',{detail:{playing:false}}));
   panel?.querySelectorAll('.duel-clip-play').forEach(button=>{button.classList.remove('playing');button.style.setProperty('--played','0%')});
  }
  function hide(){
-  stop();loadingAbort?.abort();loadingAbort=null;loadingKey='';buffers=[];bufferKey='';key='';searchVersion++;guessBusy=false;readyBusy=false;
+  clearTimeout(guessTimer);guessVersion++;stop();loadingAbort?.abort();loadingAbort=null;loadingKey='';buffers=[];bufferKey='';key='';searchVersion++;guessBusy=false;readyBusy=false;
   if(panel)panel.hidden=true;view=null;keyboardLayout();
  }
  async function acknowledgeAudio(){
@@ -103,14 +104,17 @@ window.NeedleDuel=(()=>{
    panel.innerHTML+=heading(phase==='preparing'?'Getting the records ready.':phase==='preparing-clips'?'Cutting your five moments.':'Ready on both sides.','Your guessing timer stays paused while audio loads.')+'<div class="duel-wait"><div class="duel-orbit" aria-hidden="true">↔</div><h2 id="duel-wait-label">'+(phase==='loading'?'Loading your private clips…':'Preparing audio…')+'</h2><p class="muted">Both players get their own five clips. No titles. No artwork. Just sound.</p><p id="duel-feedback" aria-live="polite"></p><button id="duel-audio-retry" type="button" hidden>Retry audio ↻</button></div>';
    el('duel-audio-retry').onclick=()=>{el('duel-audio-retry').hidden=true;prepareAudio()};
   }else if(phase==='playing'){
-   panel.innerHTML+=heading('Five parts. One song.','Play any clip, in any order. Unlimited replays and guesses until the clock runs out.')+'<div class="duel-play-layout"><section class="duel-listen"><div class="duel-visual" aria-hidden="true">'+Array.from({length:12},()=>'<i></i>').join('')+'</div><div id="duel-play-clips" class="duel-play-clips">'+Array.from({length:5},(_,i)=>'<button class="duel-clip-play" type="button" data-play="'+i+'"><span class="duel-clip-number">'+(i+1)+'</span><span>▶ Play clip<small>'+format(view.duel.positions[i])+' · 5 seconds</small></span><span class="duel-clip-progress"></span></button>').join('')+'</div>'+controls()+'</section><section class="duel-answer-side"><div class="eyebrow">TRUST YOUR EARS</div><h2>Name that song.</h2><form id="duel-guess-form"><label class="sr-only" for="duel-guess">Song title or artist and title</label><input id="duel-guess" maxlength="200" autocomplete="off" placeholder="Song title (artist optional)…" required><button class="primary" id="duel-guess-submit" type="submit">Guess ↗</button></form><p id="duel-feedback" role="status" aria-live="polite"></p><button id="duel-skip" type="button">I give up—skip my song →</button><p id="duel-opponent-status" class="muted"></p><button id="duel-audio-retry" type="button" hidden>Retry audio ↻</button></section></div>';
+   panel.innerHTML+=heading('Five parts. One song.','Play any clip, in any order. Unlimited replays and guesses until the clock runs out.')+'<div class="duel-play-layout"><section class="duel-listen"><div class="duel-visual" aria-hidden="true">'+Array.from({length:12},()=>'<i></i>').join('')+'</div><div id="duel-play-clips" class="duel-play-clips">'+Array.from({length:5},(_,i)=>'<button class="duel-clip-play" type="button" data-play="'+i+'"><span class="duel-clip-number">'+(i+1)+'</span><span>▶ Play clip<small>'+format(view.duel.positions[i])+' · 5 seconds</small></span><span class="duel-clip-progress"></span></button>').join('')+'</div>'+controls()+'</section><section class="duel-answer-side"><div class="eyebrow">TRUST YOUR EARS</div><h2>Name that song.</h2><form id="duel-guess-form"><label class="sr-only" for="duel-guess">Song title or artist and title</label><input id="duel-guess" maxlength="200" autocomplete="off" placeholder="Search a song or artist…" aria-controls="duel-suggestions" required><button class="primary" id="duel-guess-submit" type="submit">Guess ↗</button></form><div id="duel-suggestions" class="duel-suggestions" aria-label="Song suggestions"></div><p id="duel-suggestion-status" class="muted" aria-live="polite"></p><p id="duel-feedback" role="status" aria-live="polite"></p><button id="duel-skip" type="button">I give up—skip my song →</button><p id="duel-opponent-status" class="muted"></p><button id="duel-audio-retry" type="button" hidden>Retry audio ↻</button></section></div>';
    panel.querySelectorAll('[data-play]').forEach(button=>button.onclick=()=>play(Number(button.dataset.play)));
    el('duel-stop').onclick=stop;el('duel-volume').oninput=()=>{const volume=Number(el('duel-volume').value);localStorage.setItem('needle-volume',String(volume));document.getElementById('volume').value=String(volume);if(gain&&audioContext)gain.gain.setTargetAtTime(volume,audioContext.currentTime,.015)};
-   el('duel-guess-form').onsubmit=async event=>{event.preventDefault();const input=el('duel-guess');const guess=input.value.trim();if(!guess||guessBusy)return;guessBusy=true;el('duel-guess-submit').disabled=true;try{await send('duel-guess',{guess})}finally{guessBusy=false;if(el('duel-guess-submit')){el('duel-guess-submit').disabled=!!view.duel.done;if(!view.duel.done){input.select();input.focus()}}}};
+   el('duel-guess').oninput=()=>{clearTimeout(guessTimer);guessVersion++;el('duel-suggestions').replaceChildren();el('duel-suggestion-status').textContent='';if(el('duel-guess').value.trim().length>=2)guessTimer=setTimeout(guessSuggestions,250)};
+   el('duel-guess-form').onsubmit=async event=>{event.preventDefault();const input=el('duel-guess');const guess=input.value.trim();if(!guess||guessBusy)return;clearTimeout(guessTimer);guessVersion++;el('duel-suggestions').replaceChildren();guessBusy=true;el('duel-guess-submit').disabled=true;try{await send('duel-guess',{guess})}finally{guessBusy=false;if(el('duel-guess-submit')){el('duel-guess-submit').disabled=!!view.duel.done;if(!view.duel.done){input.select();input.focus()}}}};
    el('duel-skip').onclick=()=>send('duel-skip');el('duel-audio-retry').onclick=()=>prepareAudio();
   }else if(phase==='reveal'){
    const answers=view.duel.answers||[];
-   panel.innerHTML+=heading('The records revealed.',escape(view.duel.notice||'A point for each correct song. Both players can score.'))+'<div class="duel-reveal-grid">'+(answers.length?answers.map(answer=>'<article class="duel-result"><div class="eyebrow">'+escape(answer.owner)+'’S PICK FOR '+escape(answer.guesser)+'</div><span class="duel-result-mark">'+(answer.correct?'✓':'○')+'</span><h2>'+escape(answer.title)+'</h2><p>'+escape(answer.artist)+'</p><strong>'+(answer.correct?escape(answer.guesser)+' guessed it · +1 point':escape(answer.guesser)+(answer.result==='no-song'?' had no song':' did not guess it'))+'</strong>'+(answer.link&&/^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}$/.test(answer.link)?'<a href="'+escape(answer.link)+'" target="_blank" rel="noopener">Watch on YouTube ↗</a>':'')+'</article>').join(''):'<p class="muted">Neither player chose a song before the timer ended.</p>')+'</div><div class="duel-bottom"><p class="muted">'+(view.host?'Ready for another pair of mystery songs?':'Waiting for the host to continue.')+'</p><button class="primary" id="duel-next" type="button">'+(view.round>=view.rounds?'See final scores →':'Next round →')+'</button></div>';
+   panel.innerHTML+=heading('The records revealed.',escape(view.duel.notice||'A point for each correct song. Both players can score.'))+'<div class="duel-reveal-grid">'+(answers.length?answers.map(answer=>'<article class="duel-result"><div class="eyebrow">'+escape(answer.owner)+'’S PICK FOR '+escape(answer.guesser)+'</div><span class="duel-result-mark">'+(answer.correct?'✓':'○')+'</span><h2>'+escape(answer.title)+'</h2><p>'+escape(answer.artist)+'</p><strong>'+(answer.correct?escape(answer.guesser)+' guessed it · +1 point':escape(answer.guesser)+(answer.result==='no-song'?' had no song':' did not guess it'))+'</strong>'+(answer.link&&/^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}$/.test(answer.link)?'<a href="'+escape(answer.link)+'" target="_blank" rel="noopener">Watch on YouTube ↗</a>':'')+'</article>').join(''):'<p class="muted">Neither player chose a song before the timer ended.</p>')+'</div><div class="duel-preview-controls"><button id="duel-preview-play" type="button">▶ Replay both previews</button><button id="duel-preview-stop" type="button">Stop ■</button><span id="duel-preview-status" role="status"></span></div><div class="duel-bottom"><p class="muted">'+(view.host?'Ready for another pair of mystery songs?':'Waiting for the host to continue.')+'</p><button class="primary" id="duel-next" type="button">'+(view.round>=view.rounds?'See final scores →':'Next round →')+'</button></div>';
+   el('duel-preview-play').onclick=()=>playPreviews();el('duel-preview-stop').onclick=()=>{stop();previewStatus('Previews stopped.');panel.querySelectorAll('.duel-result').forEach(n=>n.classList.remove('preview-playing'))};
+   queueMicrotask(()=>{if(view?.phase==='reveal')playPreviews()});
    el('duel-next').hidden=!view.host;el('duel-next').onclick=()=>send('duel-next');
   }else if(phase==='finished'){
    const players=[...view.players].sort((a,b)=>b.score-a.score),winner=players[0],tie=players.every(p=>p.score===winner.score);
@@ -138,6 +142,44 @@ window.NeedleDuel=(()=>{
   }catch(error){if(!stale(active,identity)&&version===searchVersion)el('duel-search-status').textContent=error.message}
   finally{if(!stale(active,identity)&&el('duel-find'))el('duel-find').disabled=false}
  }
+ async function guessSuggestions(){
+  const input=el('duel-guess'),query=input?.value.trim();if(!query||view?.phase!=='playing'||view.duel.done)return;
+  const version=++guessVersion,identity=key,active=bridge.getSession();el('duel-suggestion-status').textContent='Searching…';
+  try{
+   const result=await bridge.api('duel-guess-search?'+new URLSearchParams({...active,round:String(view.round),generation:view.duel.generation,q:query}));
+   if(stale(active,identity)||version!==guessVersion||view.duel.done)return;
+   el('duel-suggestion-status').textContent=result.results.length?'Choose a suggestion to guess, or type your own title.':'No suggestions. You can still submit your own title.';
+   el('duel-suggestions').innerHTML=result.results.map((song,i)=>'<button type="button" data-suggestion="'+i+'"><span>'+escape(song.title)+'</span><small>'+escape(song.artist)+'</small></button>').join('');
+   panel.querySelectorAll('[data-suggestion]').forEach(button=>button.onclick=()=>{if(view.duel.done||guessBusy||now()<view.duel.starts_at||now()>=view.deadline)return;const song=result.results[Number(button.dataset.suggestion)];input.value=song.artist+' - '+song.title;el('duel-guess-form').requestSubmit()});
+  }catch(error){if(!stale(active,identity)&&version===guessVersion)el('duel-suggestion-status').textContent='Suggestions unavailable. Type a title and press Guess.'}
+ }
+ function previewStatus(message){if(el('duel-preview-status'))el('duel-preview-status').textContent=message}
+ async function playPreviews(){
+  stop();const run=previewRun,identity=key,active=bridge.getSession(),answers=[...(view.duel.answers||[])];
+  const current=()=>run===previewRun&&!stale(active,identity)&&view.phase==='reveal';
+  audioContext ||= new AudioContext();
+  try{await audioContext.resume()}catch{}
+  for(let i=0;i<answers.length&&current();i++){
+   previewStatus('Loading '+(i+1)+' / '+answers.length+'…');
+   const abort=new AbortController();previewAbort=abort;const timeout=setTimeout(()=>abort.abort(),20000);
+   try{
+    const query=new URLSearchParams({...active,round:String(view.round),generation:view.duel.generation,song:String(i)});
+    const response=await fetch('/duel-preview?'+query,{signal:abort.signal,cache:'no-store'});if(!response.ok)throw Error('Preview unavailable');
+    const buffer=await audioContext.decodeAudioData(await response.arrayBuffer());clearTimeout(timeout);if(!current())return;
+    if(audioContext.state!=='running'){previewStatus('Press Replay to hear the previews.');return}
+    gain ||= audioContext.createGain();analyser ||= audioContext.createAnalyser();analyser.fftSize=128;
+    gain.gain.setValueAtTime(Number(localStorage.getItem('needle-volume')??.7),audioContext.currentTime);
+    const source=audioContext.createBufferSource();source.buffer=buffer;source.connect(gain);gain.disconnect();gain.connect(analyser);analyser.disconnect();analyser.connect(audioContext.destination);audioSource=source;
+    panel.querySelectorAll('.duel-result').forEach((n,j)=>n.classList.toggle('preview-playing',i===j));
+    previewStatus((i+1)+' / '+answers.length+' · '+answers[i].artist+' — '+answers[i].title);
+    const duration=Math.min(10,buffer.duration);document.body.classList.add('is-playing');window.dispatchEvent(new CustomEvent('needle:audio',{detail:{playing:true,analyser,duration}}));
+    await new Promise(resolve=>{source.onended=resolve;abort.signal.addEventListener('abort',resolve,{once:true});source.start(0,0,duration)});
+    if(audioSource===source)audioSource=null;
+   }catch(error){if(current())previewStatus('Preview unavailable. Trying the next song…')}
+   finally{clearTimeout(timeout);if(previewAbort===abort)previewAbort=null}
+  }
+  if(current()){stop();panel.querySelectorAll('.duel-result').forEach(n=>n.classList.remove('preview-playing'));previewStatus('Previews complete · 10 seconds per song.')}
+ }
  function savePositions(locked){revision++;paintSlots();send('duel-clips',{positions:[...positions],revision,locked})}
  function paintSlots(){
   if(!el('duel-slots'))return;const locked=!!view.duel.locked,end=view.duel.duration||5;
@@ -162,7 +204,7 @@ window.NeedleDuel=(()=>{
   }
   if(view.phase==='loading'){if(d.done){status('Your opponent did not pick a song. Waiting for their audio.')}else prepareAudio()}
   if(view.phase==='playing'){
-   if(d.done)stop();
+   if(d.done){stop();clearTimeout(guessTimer);guessVersion++;el('duel-suggestions').replaceChildren();el('duel-suggestion-status').textContent=''}
    const disabled=!!d.done||now()<d.starts_at;
    panel.querySelector('.duel-listen').hidden=d.done==='no-song';panel.querySelector('.duel-play-layout').classList.toggle('duel-without-song',d.done==='no-song');
    el('duel-guess-form').hidden=el('duel-skip').hidden=d.done==='no-song';
@@ -185,7 +227,7 @@ window.NeedleDuel=(()=>{
  function render(value,apiBridge){
   bridge=apiBridge;view=value;received=performance.now();panel=el('duel-panel');panel.hidden=false;
   const identity=phaseKey(view);
-  if(identity!==key){stop();loadingAbort?.abort();loadingKey='';key=identity;guessBusy=false;mount()}
+  if(identity!==key){clearTimeout(guessTimer);guessVersion++;stop();loadingAbort?.abort();loadingKey='';key=identity;guessBusy=false;mount()}
   if(view.duel?.clip_key&&bufferKey!==view.duel.clip_key&&view.phase==='loading'){buffers=[];bufferKey=''}
   update();keyboardLayout();
  }

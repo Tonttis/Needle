@@ -64,6 +64,30 @@ class DuelHTTPTests(HTTPGameTests):
   self.assertEqual(self.post('duel-settings',dict(**a,rounds=5))['rounds'],5)
   self.assert_http_error(lambda:self.post('duel-settings',dict(**b,rounds=1)))
   self.assert_http_error(lambda:self.post('next',a))
+ def test_guess_suggestions_and_private_reveal_previews(self):
+  a,b,v=self.room();generation=v['duel']['generation']
+  query=urllib.parse.urlencode(dict(**a,round=1,generation=generation,q='anything'))
+  self.assert_http_error(lambda:self.get('duel-guess-search?'+query))
+  self.assertRaises(ValueError,lambda:s.DUEL.preview_song(a['room'],a['token'],0,1,generation))
+  self.pick(a,0);self.pick(b,1);self.clips(a,[0,10,20,30,40]);self.clips(b,[0,10,20,30,40]);self.act(a,'ready');self.act(b,'ready');self.clock+=2
+  result=self.get('duel-guess-search?'+query)
+  self.assertEqual(result,{'results':[{'title':'Song A','artist':'Artist A'},{'title':'Song B','artist':'Artist B'}]})
+  self.assertRaises(ValueError,lambda:s.DUEL.preview_song(a['room'],a['token'],0,1,generation))
+  self.act(a,'guess',guess='Song B');self.act(b,'guess',guess='Song A')
+  self.assertEqual(s.DUEL.preview_song(a['room'],a['token'],0,1,generation)['title'],'Song A')
+  self.assert_http_error(lambda:self.get('duel-guess-search?'+query))
+  self.assertRaises(ValueError,lambda:s.DUEL.preview_song(a['room'],'invalid',0,1,generation))
+  self.assertRaises(ValueError,lambda:s.DUEL.preview_song(a['room'],a['token'],0,1,'stale'))
+  self.assertRaises(ValueError,lambda:s.DUEL.preview_song(a['room'],a['token'],2,1,generation))
+  url=self.url.replace('/api/','/')+'duel-preview?'+urllib.parse.urlencode(dict(**a,round=1,generation=generation,song=0))
+  with patch.object(s.deezer_reveal_cache,'get',return_value=(b'deezer-preview','audio/mpeg')) as preview:
+   with urllib.request.urlopen(url) as response:self.assertEqual(response.read(),b'deezer-preview')
+   self.assertEqual(preview.call_args.args[1]['title'],'Song A')
+  with patch.object(s.deezer_reveal_cache,'get',side_effect=ValueError('Unavailable')),patch.object(d,'cut_clip',return_value=b'fallback') as clip:
+   with urllib.request.urlopen(url) as response:self.assertEqual(response.read(),b'fallback')
+   self.assertEqual(clip.call_args.args[-1],10)
+  self.post('duel-next',a);self.post('duel-lobby',a)
+  self.assertRaises(ValueError,lambda:s.DUEL.preview_song(a['room'],a['token'],0,1,generation))
  def test_complete_duel_private_clips_unlimited_guesses_scores_history_rematch(self):
   a,b,initial=self.room();generation=initial['duel']['generation']
   self.pick(a,0)

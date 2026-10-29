@@ -30,6 +30,7 @@ async function positions(page,values){
   for(const context of [aContext,bContext]){await context.route('**/*',route=>route.request().url().startsWith(base)||route.request().url().startsWith('data:')?route.continue():route.abort());context.on('page',page=>page.on('pageerror',error=>errors.push(error.message)))}
   const a=await aContext.newPage(),b=await bContext.newPage();
   await a.goto(base);await a.locator('[data-mode="duel"]').click();assert.equal(await a.locator('#solo').isVisible(),false);assert.equal(await a.locator('#genre').isVisible(),false);
+  const art=await a.locator('.duel-card-art img').boundingBox();assert.ok(Math.abs(art.width/art.height-260/160)<.02);await a.screenshot({path:path.join(shots,'home-duel.png')});
   await a.locator('#name').fill('Alice');await a.locator('#create').click();await phase(a,'lobby');await bounds(a,'lobby desktop');
   const av=await state(a);await a.locator('#duel-rounds').selectOption('1');
   await b.goto(base+'/?room='+av.code);await b.locator('#invite-name').fill('Bob');await b.locator('#invite-join').click();await phase(b,'lobby');await bounds(b,'lobby phone');
@@ -55,10 +56,12 @@ async function positions(page,values){
   await a.screenshot({path:path.join(shots,'guess-desktop.png')});await b.screenshot({path:path.join(shots,'guess-phone.png')});
   for(let i=0;i<3;i++){await a.locator('#duel-guess').fill('Wrong title '+i);await a.locator('#duel-guess-submit').click();await a.waitForFunction(count=>document.querySelector('#duel-feedback').textContent.includes('Not that song'),i)}
   assert.ok((await state(a)).duel.attempts>=3);
-  await a.locator('#duel-guess').fill('Song B');await a.locator('#duel-guess-submit').click();await a.waitForFunction(()=>document.querySelector('#duel-feedback').textContent.startsWith('Correct'));
-  await b.locator('#duel-guess').fill('Artist A Song A');await b.locator('#duel-guess-submit').click();await phase(a,'reveal');await phase(b,'reveal');await bounds(a,'reveal desktop');await bounds(b,'reveal phone');
-  await a.screenshot({path:path.join(shots,'reveal-desktop.png')});await b.screenshot({path:path.join(shots,'reveal-phone.png')});
+  await a.locator('#duel-guess').fill('Song B');await a.locator('[data-suggestion="1"]').waitFor();await bounds(a,'desktop suggestions');await a.locator('[data-suggestion="1"]').click();await a.waitForFunction(()=>document.querySelector('#duel-feedback').textContent.startsWith('Correct'));
+  await b.locator('#duel-guess').fill('Artist A Song A');await b.locator('[data-suggestion="0"]').waitFor();await bounds(b,'phone suggestions');await b.locator('[data-suggestion="0"]').click();await phase(a,'reveal');await phase(b,'reveal');await bounds(a,'reveal desktop');await bounds(b,'reveal phone');
   assert.deepEqual((await state(a)).players.map(p=>p.score),[1,1]);
+  await a.locator('#duel-preview-play').click();await a.waitForFunction(()=>document.querySelector('#duel-preview-status').textContent.includes('1 / 2 ·'),{},{timeout:25000});await a.waitForFunction(()=>document.querySelector('#duel-preview-status').textContent.includes('2 / 2 ·'),{},{timeout:15000});await a.waitForFunction(()=>document.querySelector('#duel-preview-status').textContent.includes('Previews complete'),{},{timeout:15000});
+  await a.locator('#duel-preview-play').click();await a.waitForFunction(()=>document.body.classList.contains('is-playing'));await a.locator('#duel-preview-stop').click();assert.equal(await a.evaluate(()=>document.body.classList.contains('is-playing')),false);
+  await a.screenshot({path:path.join(shots,'reveal-desktop.png')});await b.screenshot({path:path.join(shots,'reveal-phone.png')});
   await a.locator('#duel-next').click();await phase(a,'finished');await phase(b,'finished');await bounds(a,'finished desktop');await bounds(b,'finished phone');
   const board=await a.evaluate(async()=> (await fetch('/api/leaderboard?mode=duel&difficulty=Duel&multi=1')).json());assert.equal(board.entries.length,2);
   await a.locator('#duel-rematch').click();await phase(a,'lobby');await phase(b,'lobby');await a.locator('#duel-start').click();await phase(b,'picking');

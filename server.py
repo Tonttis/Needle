@@ -666,6 +666,16 @@ class Handler(BaseHTTPRequestHandler):
                     if not r:return self.reply({'error':'This room could not be found. Ask for a new invite.'},404)
                     if not r.get('multi'):return self.reply({'error':'This is not a multiplayer room.'},400)
                     return self.reply({'room':code,'host':r['players'][r['host']]['name'],'mode':r.get('game_mode',r['mode']),'genre':r['genre'],'region':r['region'],'difficulty':r['difficulty'],'decade':r.get('decade','All'),'rounds':r['rounds'],'players':len(r['players']),'max_players':2 if r.get('mode')=='duel' else 8,'joinable':r['phase']=='lobby' and len(r['players'])<(2 if r.get('mode')=='duel' else 8),'reason':'This game has already started.' if r['phase']!='lobby' else 'This room is full.' if len(r['players'])>=(2 if r.get('mode')=='duel' else 8) else ''})
+            if u.path=='/api/duel-guess-search':
+                return self.reply(DUEL.guess_search(q.get('room',[''])[0],q.get('token',[''])[0],q.get('q',[''])[0],int(q.get('round',['0'])[0]),q.get('generation',[''])[0]))
+            if u.path=='/duel-preview':
+                song=DUEL.preview_song(q.get('room',[''])[0],q.get('token',[''])[0],int(q.get('song',['-1'])[0]),int(q.get('round',['0'])[0]),q.get('generation',[''])[0])
+                try:
+                    if song.get('custom'):raise ValueError('YouTube pick')
+                    data,typ=deezer_reveal_cache.get('duel:'+song['id'],song)
+                except Exception:
+                    data=duel.cut_clip(song['path'],min(max(0,float(song.get('duration',10))-10),float(song.get('duration',10))*.25),10);typ='audio/mpeg'
+                self.send_response(200);self.send_header('Content-Type',typ);self.send_header('Content-Length',str(len(data)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(data);return
             if u.path=='/api/duel-search':
                 return self.reply(DUEL.search(q.get('room',[''])[0],q.get('token',[''])[0],q.get('q',[''])[0],int(q.get('round',['0'])[0]),q.get('generation',[''])[0]))
             if u.path.startswith('/duel-clip/'):
