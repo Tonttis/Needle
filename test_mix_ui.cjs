@@ -6,7 +6,7 @@ class Select{
  set innerHTML(html){this.options=[...html.matchAll(/<option( disabled)?>(.*?)<\/option>/g)].map(m=>({value:m[2].replace(/&amp;/g,'&'),disabled:!!m[1]}));this.value=this.options.find(o=>!o.disabled)?.value||'';}
  addEventListener(event,fn){this.listeners[event]=fn;}
 }
-const elements={'#anime-answer-field':{},'#region':new Select('Worldwide'),'#genre':new Select('Mixed'),'#difficulty':new Select('Easy'),'#decade':new Select('All'),'#solo':{},'#create':{},'#mix-help':{}};
+const elements={'#anime-answer':new Select('song'),'#anime-answer-field':{},'#region':new Select('Worldwide'),'#genre':new Select('Mixed'),'#difficulty':new Select('Easy'),'#decade':new Select('All'),'#solo':{},'#create':{},'#mix-help':{}};
 const scope={mode:'guess',$:id=>elements[id],esc:s=>s.replace(/&/g,'&amp;'),api:async path=>{assert.equal(path,'config');return config},setTimeout:()=>1,clearTimeout(){},URLSearchParams,error:e=>{throw e}};
 vm.createContext(scope);const code=fs.readFileSync('static/app.js','utf8');vm.runInContext(code.slice(code.indexOf('let warmTimer,mixConfig;')),scope);
 setImmediate(()=>{try{
@@ -24,6 +24,7 @@ setImmediate(()=>{try{
  elements['#region'].value='Finland';elements['#genre'].value='Jazz';vm.runInContext('syncMix()',scope);
  assert.equal(elements['#genre'].value,'Mixed');assert.ok(elements['#genre'].options.find(o=>o.value==='Jazz').disabled);
  scope.mode='hits';vm.runInContext('syncMix()',scope);assert.equal(elements['#genre'].parentElement.hidden,true);assert.match(elements['#mix-help'].textContent,/Hottest Hits/);
+ scope.mode='race';elements['#region'].value='Worldwide';elements['#genre'].value='Anime';vm.runInContext('syncMix()',scope);assert.equal(elements['#genre'].parentElement.hidden,false);assert.equal(elements['#anime-answer'].value,'anime');assert.equal(elements['#anime-answer'].disabled,true);assert.match(elements['#mix-help'].textContent,/opening/);scope.mode='guess';vm.runInContext('syncMix()',scope);assert.equal(elements['#anime-answer'].disabled,false);
  scope.mode='playlist';vm.runInContext('syncMix()',scope);assert.equal(elements['#decade'].parentElement.hidden,true);scope.mode='guess';vm.runInContext('syncMix()',scope);assert.equal(elements['#genre'].parentElement.hidden,false);assert.equal(elements['#decade'].parentElement.hidden,false);
  console.log('Filter UI: every supported scene/genre, difficulty fallback, and unsupported choices passed.');
 }catch(e){console.error(e);process.exitCode=1}});

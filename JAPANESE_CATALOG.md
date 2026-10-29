@@ -51,7 +51,7 @@ Validation includes the full Python regression suite, all JavaScript regression 
 When **Your rotation = Anime**, the home setup and host's lobby controls show **Anime answer**:
 
 - **Mode 1 · Song / artist** keeps the existing song-answer rules.
-- **Mode 2 · Anime title** accepts the anime's English title, listed Japanese romanization, or Japanese title. Suggestions show anime titles rather than song metadata. A typed answer can be submitted with the Guess anime button or Enter; selecting a suggestion submits it too. Multiple choice shows distinct anime titles. Video Race and eligible Party rounds use the same anime-answer setting and retain their existing timing and scoring rules.
+- **Mode 2 · Anime title** accepts the anime's English title, listed Japanese romanization, or Japanese title. Suggestions show anime titles rather than song metadata. A typed answer can be submitted with the Guess anime button or Enter; selecting a suggestion submits it too. Multiple choice shows distinct anime titles. Video Race now always guesses anime titles (see V12.4 below). Other eligible Party rounds use the selected anime-answer setting and retain their existing timing and scoring rules.
 
 `anime_series.tsv` maps every one of the current registry's 166 series credits to English, romaji, Japanese, and explicitly accepted alternate titles. Related seasons/arcs are grouped where the main series title is a valid answer. Original catalog names remain accepted. Separate adaptations with shared parent titles never appear together as competing choices. Selecting a suggestion has the same meaning as submitting its displayed title.
 
@@ -72,3 +72,24 @@ The aliases are editorial metadata. Representative English/romaji/native title c
 - Regalia: https://anilist.co/anime/21707/Regalia-The-Three-Sacred-Stars/
 
 `test_anime_answers.py` checks every registered theme's multilingual aliases, normalization, ambiguous choices, HTTP scoring, server validation, search, lobby authorization, rematches, history, and Video Race cooldowns. Optional `test_anime_browser.cjs` uses a localhost fixture with generated audio to check English/Japanese input, IME composition, suggestions, mobile keyboard layout, font loading, refresh, and normal song-mode behavior. It does not test an operating system's physical Japanese keyboard or live-provider availability.
+
+## V12.4 — Anime Video Race
+
+Video Race now exposes the normal rotation, scene, difficulty, and decade controls. Choose **Anime** to play anime opening sequences and guess **the anime title**, automatically. The answer selector is fixed to Anime title for these rounds, including host lobby settings. The server enforces anime-title matching even if an old client requests song answers. English, romaji, kanji/kana, IME handling, and local anime suggestions use the existing multilingual alias registry.
+
+`anime_openings.tsv` explicitly identifies 183 opening themes within the existing song registry. Endings, insert songs, and film theme MVs do not enter this video pool. The available editorial opening counts are 74 Easy, 40 Medium, 31 Hard, 22 Expert, and 16 Impossible; provider availability and decade filtering can reduce actual playable counts. A mix must contain at least two eligible opening artists to start. Ordinary Anime snippet/multiple-choice pools retain their full theme registry. Anime video rounds inside Party also use opening-only draws and anime-title guesses.
+
+The selected round and its prefetch carry an opening-only source marker. Video resolution uses a separate cache and explicit opening searches; an ordinary artist music-video cache cannot supply these rounds. Three representative official uploads are pinned as preferred sources, with searched alternatives if a source cannot load. Search candidates need opening markers, matching anime and song credits, and a 45–150 second TV-sized duration. Explicit endings, covers, lyric videos, AMVs, live performances, full versions, and compilations are rejected. Official/verified channels rank ahead of equivalent candidates. Candidate metadata is a heuristic, not analysis of the actual animation frames.
+
+Downloaded files must contain audio and a real video stream; audio-only files and cover-art-only streams are rejected. Download failures offer retry/skip instead of falling back to a regular music video or audio-only playback. If the browser cannot decode a downloaded opening, skip remains available. The actual downloaded duration is checked again. At most three candidate downloads are tried, with a 60-second download limit per opening candidate. Searches use at most two batches of eight flat metadata results with 25-second timeouts, avoiding full extraction of every candidate. There is no video search for all 183 themes during mix preparation.
+
+Successful opening video mappings are cached in memory and automatically in the `anime_opening_cache` table of the existing `data/catalog-cache.sqlite`, for 30 days. This table creates itself; no setup or manual migration is required. Existing score/history data is preserved. Media still uses the shared bounded 30-day / 2 GiB cache. The next video is prefetched as before, and media preparation does not consume guessing time. The 12% audio-only lead-in and two-second fade remain in place. Scores use the real opening video's duration; guesses and history refer to the underlying song and its associated anime.
+
+Representative primary sources and technical references:
+
+- Official Oshi no Ko movie page, whose opening iframe links to `PgBvV9ofjmA`: https://ichigoproduction.com/Season1/movie/
+- MAPPA Chainsaw Man opening / KICK BACK: https://www.youtube.com/watch?v=dFlDRhvM4L0
+- Aniplex USA Mashle opening / Bling-Bang-Bang-Born: https://www.youtube.com/watch?v=9rVKos-oGnQ
+- yt-dlp metadata/search option documentation: https://github.com/yt-dlp/yt-dlp
+
+`test_anime_video_race.py` checks opening-only coverage across all tiers, candidate rejection/ranking, persistent cache reuse, strict video requirements, prefetch, Party behavior, anime-only search and kanji guesses, and unchanged song-history recording. Optional `test_anime_race_browser.cjs` uses a generated 90-second MP4 with real video and audio to exercise the browser ready gate, fade, audio effects, English/Japanese guesses, lobby restrictions, and phone/desktop layouts. These fixture checks do not establish live YouTube download availability in a deployment.

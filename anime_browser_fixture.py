@@ -7,8 +7,10 @@ def main():
  temporary=tempfile.TemporaryDirectory();root=pathlib.Path(temporary.name);s.boards.DB_PATH=root/'scores.sqlite3'
  path=root/'preview.mp3';subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','sine=frequency=440:duration=2','-c:a','libmp3lame',str(path)],check=True,capture_output=True)
  audio=(path.read_bytes(),'audio/mpeg');rows=tracks()
- s.pool=lambda *args:rows;s.choose_round=lambda r:rows[0];s.queue_credit=lambda *args:None
+ video=root/'opening.mp4';subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','testsrc=size=320x180:rate=8:duration=90','-f','lavfi','-i','sine=frequency=440:duration=90','-c:v','libx264','-pix_fmt','yuv420p','-preset','ultrafast','-c:a','aac','-shortest',str(video)],check=True,capture_output=True)
+ s.pool=lambda *args:rows;s.choose_round=lambda r:dict(rows[0],_anime_opening=True) if r.get('mode')=='race' else rows[0];s.queue_credit=lambda *args:None
  s.credit_workers.submit=lambda *args,**kwargs:None
+ s.fetch_race_media=lambda song,audio_only=False:('abcdefghijk','Fixture anime opening',str(video),90,'video/mp4')
  s.audio_cache.get=lambda *args:audio;s.deezer_reveal_cache.get=lambda *args:audio
  class Handler(s.Handler):
   def log_message(self,*args):pass

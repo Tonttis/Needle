@@ -193,7 +193,7 @@ function renderRaceVideo(){
    raceObjectURL=URL.createObjectURL(blob);v.src=raceObjectURL;
    v.onplaying=async()=>{if(raceKey!==key)return;if(!state.race_started){box.querySelector('.race-start').hidden=true;v.dataset.unlocked='1';v.pause();v.currentTime=0;message.textContent='Ready. Waiting for the other listeners…';await action('race-ready',{round});return}await startRaceVisual(v,key)};
    v.onpause=()=>stopRaceVisual(v);v.onended=()=>stopRaceVisual(v);
-   v.onerror=()=>{if(raceKey!==key)return;if(state.race_type==='video/mp4'&&!state.race_started){message.textContent='Trying full-length audio instead…';action('race-audio',{round})}else message.textContent='Browser could not decode this media. Skip this song or retry the download.'};
+   v.onerror=()=>{if(raceKey!==key)return;if(state.anime_opening){message.textContent='This anime opening video could not be decoded. Skip this round or try another browser.'}else if(state.race_type==='video/mp4'&&!state.race_started){message.textContent='Trying full-length audio instead…';action('race-audio',{round})}else message.textContent='Browser could not decode this media. Skip this song or retry the download.'};
    v.oncanplay=()=>{if(v.dataset.unlocked)return;v.play().catch(()=>{box.querySelector('.race-start').hidden=false;message.textContent='Media ready. Press Start playback to enable sound.'})};
   }).catch(e=>{if(raceKey===key){raceLoading=false;message.textContent=e.message+' — retrying.'}});
  }
@@ -225,7 +225,7 @@ $('#invite-form').onsubmit=async e=>{e.preventDefault();const button=$('#invite-
 if(inviteCode&&(!session||session.room!==inviteCode)){session=null;sessionStorage.removeItem('needle');showInvite(inviteCode)}else if(inviteCode&&session)clearInviteURL();
 // Lobby fields are initialized once per visit, so polling never overwrites edits.
 let lobbyInitialized=false,lobbyDirty=false,lobbyGeneration=0,lobbySignature='';
-function lobbyVisibility(){const custom=$('#lobby-source').value==='playlist',m=$('#lobby-mode').value;$('#lobby-url-label').hidden=!custom;$('#lobby-decade-label').hidden=custom;document.querySelectorAll('.lobby-filter').forEach(x=>x.hidden=custom||m==='hits');$('#lobby-party').hidden=m!=='party';$('#lobby-anime-answer-field').hidden=custom||m==='hits'||$('#lobby-genre').value!=='Anime'}
+function lobbyVisibility(){if(state?.host)$('#lobby-anime-answer').disabled=false;const custom=$('#lobby-source').value==='playlist',m=$('#lobby-mode').value;$('#lobby-url-label').hidden=!custom;$('#lobby-decade-label').hidden=custom;document.querySelectorAll('.lobby-filter').forEach(x=>x.hidden=custom||m==='hits');$('#lobby-party').hidden=m!=='party';$('#lobby-anime-answer-field').hidden=custom||m==='hits'||$('#lobby-genre').value!=='Anime';if(!custom&&m==='race'&&$('#lobby-genre').value==='Anime'){$('#lobby-anime-answer').value='anime';$('#lobby-anime-answer').disabled=true}}
 function renderLobbySettings(){
  const panel=$('#lobby-settings');panel.hidden=state.phase!=='lobby';
  if(panel.hidden){lobbyInitialized=false;return}
@@ -240,7 +240,7 @@ function renderLobbySettings(){
   $('#lobby-party').querySelectorAll('input').forEach(x=>x.checked=(state.party_modes||[]).includes(x.value));
   $('#lobby-anime-answer').value=state.anime_answer||'song';lobbyDirty=false;lobbyInitialized=true;lobbyVisibility();
  }
- panel.querySelectorAll('input,select').forEach(x=>x.disabled=!state.host);$('#lobby-save').hidden=!state.host;$('#lobby-settings-note').textContent=state.host?'Change settings, then apply them before starting.':'The host controls the game settings.';
+ panel.querySelectorAll('input,select').forEach(x=>x.disabled=!state.host);if(state.host)lobbyVisibility();$('#lobby-save').hidden=!state.host;$('#lobby-settings-note').textContent=state.host?'Change settings, then apply them before starting.':'The host controls the game settings.';
 }
 $('#lobby-settings').addEventListener('input',e=>{if(e.target.matches('input,select')){lobbyDirty=true;lobbyVisibility()}});
 $('#lobby-cancel').onclick=()=>{lobbyGeneration++;$('#lobby-progress').hidden=true;$('#lobby-save').disabled=false;$('#next').disabled=false;$('#error').textContent='Preparation cancelled. Your changes have not been applied.'};
@@ -287,14 +287,13 @@ let warmTimer,mixConfig;
 const difficultyHelp={Easy:'Recognisable hits only. Europe Easy favours cross-border anthems. Obscure tracks never fill an Easy pool.',Medium:'Known hits plus strong catalogue favourites. Worldwide and Europe Medium include crossover hits.',Hard:'Mid-catalogue singles and fan favourites. No Easy anthems here.',Expert:'Album cuts and deeper catalogue. For collectors.',Impossible:'The deepest end of the available catalogue. Expect obscurity.'};
 function syncMix(){
   if(!mixConfig)return;
-  $('#anime-answer-field').hidden=true;
+  $('#anime-answer-field').hidden=true;$('#anime-answer').disabled=false;
   $('#solo').hidden=mode==='duel';
   $('#decade').parentElement.hidden=mode==='playlist'||mode==='duel';
-  ['#genre','#region','#difficulty'].forEach(id=>$(id).parentElement.hidden=(mode==='hits'||mode==='race'||mode==='playlist'||mode==='duel'));
+  ['#genre','#region','#difficulty'].forEach(id=>$(id).parentElement.hidden=(mode==='hits'||mode==='playlist'||mode==='duel'));
   if(mode==='duel'){clearTimeout(warmTimer);$('#mix-help').textContent='Song Duel: online only, 2–8 players. Choose a secret song for your assigned player in 30 seconds, pick five 5-second clips from their song in 30 seconds, then listen and guess for 45 seconds. Unlimited replays and guesses. Create a room to start.';return}
   if(mode==='playlist'){$('#mix-help').textContent='Play your playlist with the game type you choose.';return}
   if(mode==='hits'){$('#mix-help').textContent='Hottest Hits: all-time singalong favourites, iconic hooks and international anthems. Five snippets, solo or with friends. A stricter song selection than Easy — no deep cuts.';warmCatalog();return}
-  if(mode==='race'){$('#mix-help').textContent='Video race: the music video (or audio + artwork) loads completely before guessing, then plays for its full length. Type to guess — fastest correct wins. Correct answers earn 20 to 1 points, spread evenly across the whole song. Skip scores 0.';warmCatalog();return}
  const supported=mixConfig.support[$('#region').value]||{};
  const previousGenre=$('#genre').value,previousDifficulty=$('#difficulty').value;
  $('#genre').innerHTML=mixConfig.genres.map(g=>'<option'+(!supported[g]?' disabled':'')+'>'+esc(g)+'</option>').join('');
@@ -303,6 +302,11 @@ function syncMix(){
  $('#difficulty').innerHTML=mixConfig.difficulties.map(d=>'<option'+(!difficulties.includes(d)?' disabled':'')+'>'+esc(d)+'</option>').join('');
  $('#difficulty').value=difficulties.includes(previousDifficulty)?previousDifficulty:difficulties[0]||'Medium';
  $('#anime-answer-field').hidden=$('#genre').value!=='Anime';
+ if(mode==='race'){
+  const anime=$('#genre').value==='Anime';if(anime){$('#anime-answer').value='anime';$('#anime-answer').disabled=true}
+  $('#mix-help').textContent=anime?'Anime Video Race: watch anime opening sequences and guess the anime title in English, romaji or Japanese. Opening themes only. The video loads before the timer starts; the intro fades in as usual. Fastest correct guess wins.':'Video race: the music video loads completely before guessing. Fastest correct wins, with 20 to 1 points across the video. Choose Anime for anime opening videos and anime-title guesses.';
+  warmCatalog();return;
+ }
  const scene=$('#region').value;
  $('#mix-help').textContent=difficultyHelp[$('#difficulty').value]+' '+(scene==='Europe'?'Europe mixes European and international crossover hits; it does not force a different country every song.':scene==='Worldwide'?'Worldwide favours international recognition on Easy.':'This scene focuses on its own artists; familiarity is relative to that scene.')+' Greyed-out combinations lack enough calibrated artists.';
  warmCatalog();
@@ -311,4 +315,3 @@ function warmCatalog(){clearTimeout(warmTimer);if(!mixConfig||mode==='playlist'|
 ['#region','#genre','#difficulty','#decade'].forEach(id=>$(id).addEventListener('change',syncMix));
 $('#solo').disabled=$('#create').disabled=true;
 api('config').then(config=>{mixConfig=config;$('#region').innerHTML=config.regions.map(x=>'<option>'+esc(x)+'</option>').join('');syncMix();$('#solo').disabled=$('#create').disabled=false}).catch(error);
-

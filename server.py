@@ -1,3 +1,4 @@
+import anime_openings
 import anime_answers
 import duel
 import math
@@ -322,6 +323,10 @@ def choose_round(r):
             cycle[:]=choices[:];random.shuffle(cycle)
             if len(cycle)>1 and cycle[-1]==r.get('previous_mode'):cycle[0],cycle[-1]=cycle[-1],cycle[0]
         r['mode']=cycle.pop();r['previous_mode']=r['mode'];r['difficulty']='Hits' if r['mode']=='hits' else r['base_difficulty']
+    if r.get('mode')=='race' and r.get('genre')=='Anime' and not r.get('playlist_report'):
+        original=r['pool'];r['pool']=anime_openings.pool(original,r.get('difficulty','Easy'))
+        try:return dict(choose_song(r),_anime_opening=True)
+        finally:r['pool']=original
     return choose_song(r)
 
 _SELECTION_KEYS=('used','artist_counts','country_counts','language_counts','recent_artists','party_cycle','mode','difficulty','previous_mode')
@@ -454,7 +459,8 @@ def state(r,p):
         playable=[t for t in r['pool'] if 'recognition' not in t or in_difficulty(t,r.get('difficulty','Medium'))]
         r['_stats']={'tracks':len(r['pool']),'answers':len(playable),'artists':len({artist_key(t) for t in playable}),'countries':len({t.get('country','?') for t in playable})}
     out['catalog']=r['_stats']
-    out['anime_answer']=r.get('anime_answer','song')
+    out['anime_answer']='anime' if anime_answers.active(r) else r.get('anime_answer','song')
+    out['anime_opening']=bool(r.get('song',{}).get('_anime_opening')) if r.get('mode')=='race' else False
     if r['phase']=='finished':out['recap']=r.get('recap',[])
     out['daily_date']=r.get('daily_date');out['score_max']=r.get('score_max',0);out['playlist_url']=r.get('playlist_url','') if p==r['host'] and r['phase']=='lobby' else '';out['base_difficulty']=r.get('base_difficulty',r.get('difficulty','Normal'));out['playlist_report']=r.get('playlist_report');out['game_mode']=r.get('game_mode',r['mode']);out['party_modes']=r.get('party_modes',[]);out['decade']=r.get('decade','All');out['region']=r.get('region','Worldwide'); out['difficulty']=r.get('difficulty','Normal')
     if r['phase'] in ['reveal','finished']:
@@ -592,6 +598,19 @@ def active_race_media():
         return paths
 
 def fetch_race_media(song,audio_only=False):
+    if song.get('_anime_opening'):
+        if audio_only:raise ValueError('Anime openings require video. Retry the video or skip this round.')
+        attempted=0
+        for vid,title in anime_openings.candidates(song,DATA):
+            try:
+                path,duration,typ=prepare_race_media(DATA,vid,video_required=True,protected=active_race_media)
+                if typ!='video/mp4' or not anime_openings.valid_duration(duration):raise ValueError('Not a TV-length opening video.')
+                anime_openings.remember(song,DATA,vid,title)
+                return vid,title,path,duration,typ
+            except Exception:
+                attempted+=1
+                if attempted>=3:break
+        raise ValueError('No playable anime opening video was found. Retry or skip this opening.')
     vid,title=(song.get('youtube_id'),song['title']) if song.get('youtube_id') else resolve_youtube(song['artist'],song['title'])
     if not vid:raise ValueError('No playable video found. Retry or skip this song.')
     path,duration,typ=prepare_race_media(DATA,vid,audio_only=audio_only,protected=active_race_media)
@@ -675,7 +694,7 @@ class Handler(BaseHTTPRequestHandler):
                     r=rooms.get(code)
                     if not r:return self.reply({'error':'This room could not be found. Ask for a new invite.'},404)
                     if not r.get('multi'):return self.reply({'error':'This is not a multiplayer room.'},400)
-                    return self.reply({'room':code,'host':r['players'][r['host']]['name'],'mode':r.get('game_mode',r['mode']),'genre':r['genre'],'region':r['region'],'difficulty':r['difficulty'],'decade':r.get('decade','All'),'rounds':r['rounds'],'anime_answer':r.get('anime_answer','song'),'players':len(r['players']),'max_players':duel.MAX_PLAYERS if r.get('mode')=='duel' else 8,'joinable':r['phase']=='lobby' and len(r['players'])<(duel.MAX_PLAYERS if r.get('mode')=='duel' else 8),'reason':'This game has already started.' if r['phase']!='lobby' else 'This room is full.' if len(r['players'])>=(duel.MAX_PLAYERS if r.get('mode')=='duel' else 8) else ''})
+                    return self.reply({'room':code,'host':r['players'][r['host']]['name'],'mode':r.get('game_mode',r['mode']),'genre':r['genre'],'region':r['region'],'difficulty':r['difficulty'],'decade':r.get('decade','All'),'rounds':r['rounds'],'anime_answer':'anime' if anime_answers.active(r) else r.get('anime_answer','song'),'players':len(r['players']),'max_players':duel.MAX_PLAYERS if r.get('mode')=='duel' else 8,'joinable':r['phase']=='lobby' and len(r['players'])<(duel.MAX_PLAYERS if r.get('mode')=='duel' else 8),'reason':'This game has already started.' if r['phase']!='lobby' else 'This room is full.' if len(r['players'])>=(duel.MAX_PLAYERS if r.get('mode')=='duel' else 8) else ''})
             if u.path=='/api/duel-guess-search':
                 return self.reply(DUEL.guess_search(q.get('room',[''])[0],q.get('token',[''])[0],q.get('q',[''])[0],int(q.get('round',['0'])[0]),q.get('generation',[''])[0]))
             if u.path=='/duel-preview':
@@ -792,6 +811,9 @@ class Handler(BaseHTTPRequestHandler):
                 if playlist_url and d.get('mode')=='hits' and len([t for t in tracks if t.get('hot_hit')])<4:raise ValueError('This playlist has too few Hottest Hits. Choose another mode.')
                 anime_answer=anime_answers.setting(d.get('anime_answer','song'),d.get('genre','Mixed'),bool(playlist_url))
                 if anime_answer=='anime':validate_anime_pool(tracks)
+                if d.get('genre')=='Anime' and not playlist_url:
+                    if d.get('mode')=='race':tracks=anime_openings.pool(tracks,d.get('difficulty','Easy'))
+                    elif d.get('mode')=='party' and 'race' in d.get('party_modes',['guess','choice','race','hits']):anime_openings.pool(tracks,d.get('difficulty','Easy'))
                 party_modes=d.get('party_modes',['guess','choice','race','hits']) if d.get('mode')=='party' else []
                 if not isinstance(party_modes,list) or any(m not in ('guess','choice','race','hits') for m in party_modes) or (d.get('mode')=='party' and not party_modes):raise ValueError('Choose at least one Party mode.')
                 party_modes=list(dict.fromkeys(party_modes))
@@ -829,6 +851,9 @@ class Handler(BaseHTTPRequestHandler):
                 if (mode=='hits' or 'hits' in party_modes) and len({artist_key(t) for t in tracks if t.get('hot_hit')})<4:raise ValueError('Not enough Hottest Hits in this mix. Choose another mode or broaden the mix.')
                 anime_answer=anime_answers.setting(d.get('anime_answer','song'),genre,bool(url))
                 if anime_answer=='anime':validate_anime_pool(tracks)
+                if genre=='Anime' and not url:
+                    if mode=='race':tracks=anime_openings.pool(tracks,difficulty)
+                    elif 'race' in party_modes:anime_openings.pool(tracks,difficulty)
                 rounds=max(1,min(30,int(d.get('rounds',10))))
                 with lock:
                     r=rooms.get(code)
@@ -850,6 +875,7 @@ class Handler(BaseHTTPRequestHandler):
                 settle(r)
                 if action in ('race-ready','race-retry','race-skip','race-audio'):
                     if r.get('mode')!='race' or r['phase']!='playing' or d.get('round')!=r['round']:raise ValueError('Round changed')
+                    if action=='race-audio' and r['song'].get('_anime_opening'):raise ValueError('Anime openings require video. Retry the video or skip this round.')
                     if action=='race-ready' and r.get('race_status') in ('ready','playing'):
                         r['race_ready'].add(p)
                         if not r.get('race_started') and r['race_ready']>=set(r['players'])-set(r['guesses']):

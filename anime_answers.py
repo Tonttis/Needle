@@ -23,7 +23,7 @@ for line in pathlib.Path(__file__).with_name('anime_series.tsv').read_text(encod
         SERIES[name]=entry
 
 
-def active(room):return room.get('genre')=='Anime' and room.get('anime_answer')=='anime' and not room.get('playlist_report')
+def active(room):return room.get('genre')=='Anime' and (room.get('anime_answer')=='anime' or room.get('mode')=='race') and not room.get('playlist_report')
 
 def setting(value,genre,playlist=False):
     if value not in ('song','anime'):raise ValueError('Choose song/artist or anime title.')
