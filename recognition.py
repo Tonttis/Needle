@@ -2,7 +2,8 @@
 Popularity ranks are only a secondary signal, never proof that a song is Easy.
 """
 import pathlib,re,unicodedata
-VERSION='v9-ru-5'
+from functools import lru_cache
+VERSION='v10-variety-8'
 # Russian phonetic keyboard: user types Latin letters while on Cyrillic layout
 # (or vice versa). Map both directions so search works on the wrong layout.
 _RU_PHONETIC=str.maketrans({
@@ -15,6 +16,7 @@ _RU_PHONETIC=str.maketrans({
 })
 COUNTRIES={'Finland':'FI','Russia':'RU','United Kingdom':'GB','Ireland':'IE','Sweden':'SE','Norway':'NO','Denmark':'DK','Germany':'DE','France':'FR','Belgium':'BE','Netherlands':'NL','Italy':'IT','Spain':'ES','Portugal':'PT','Poland':'PL','Austria':'AT','Switzerland':'CH','Moldova':'MD','Iceland':'IS','United States':'US','Canada':'CA','Australia':'AU','New Zealand':'NZ','Brazil':'BR','Colombia':'CO','Puerto Rico':'PR','South Korea':'KR','Japan':'JP','Jamaica':'JM','Nigeria':'NG','South Africa':'ZA'}
 AREAS={'Nordics':{'FI','SE','NO','DK','IS'},'Latin America':{'BR','CO','PR','MX','AR','CL','CU','DO'},'Asia':{'JP','KR','IN','TH','PH'},'Africa':{'NG','ZA','GH','CM','KE'},'Oceania':{'AU','NZ'}}
+@lru_cache(maxsize=65536)
 def text_key(value):
  value=''.join(c for c in unicodedata.normalize('NFKD',value.casefold()) if not unicodedata.combining(c))
  return re.sub(r'[^\w]+','',value)

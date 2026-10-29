@@ -5,6 +5,7 @@ import random, re, unicodedata
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor,as_completed
 
+@lru_cache(maxsize=32768)
 def norm(s):
     return ' '.join(''.join(c for c in unicodedata.normalize('NFKD',s.casefold()) if not unicodedata.combining(c)).split())
 SEEDS=[]
@@ -70,6 +71,12 @@ for key,p in PROFILES.items():
     seed=merged[key]
     seed.update(country=p['country'],region=region_for(p['country']),language=p['language'])
     seed['genres']=list(dict.fromkeys(seed['genres']+p['genres']))
+# Reggaeton/pop crossover is not a generic rap seed. Keep these artists in
+# their editorial Latin/Pop lanes, including all difficulty levels.
+for seed in merged.values():
+    if 'Latin' in seed['genres'] and 'Rap / Hip Hop' not in (profile(seed) or {}).get('genres',[]):
+        seed['genres']=[g for g in seed['genres'] if g!='Rap / Hip Hop']
+        if seed['genre']=='Rap / Hip Hop':seed['genre']=seed['genres'][0]
 SEEDS=list(merged.values())
 REGIONS=['Worldwide','Europe','North America',*AREAS,*COUNTRIES]
 GENRES=['Mixed','Pop','Rock','Metal','Rap / Hip Hop','Dance','Electronic','R&B','Indie / Alternative','Punk / Pop Punk','Soul / Funk','Country','Jazz','Blues','Reggae','Latin','K-pop','J-pop','Afrobeats']
@@ -112,10 +119,23 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80,progress=No
     if difficulty in ('Easy','Medium','Normal'):
         # Known hits are fetched first; retain the entire discovery registry.
         selected.sort(key=lambda seed:0 if any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[])) else 1 if profile(seed) else 2)
+    # Avoid requests that cannot possibly produce an answer in this tier.
+    # Keep the full returned discography for search/distractors. This makes
+    # wider playable coverage affordable without extra foreground round I/O.
+    if difficulty=='Easy':
+        known_seeds=[seed for seed in selected if any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[]))]
+        if known_seeds:selected=known_seeds
+    elif difficulty=='Hits':
+        hit_seeds=[seed for seed in selected if text_key(seed['name']) in HOT_HITS]
+        if hit_seeds:selected=hit_seeds
     def load(seed):
         try:
             results=fetch('search/artist?limit=10&q='+__import__('urllib.parse',fromlist=['quote']).quote(seed['name'])).get('data',[])
-            artist=next((a for a in results if norm(a['name'])==norm(seed['name'])),None)
+            exact=[a for a in results if norm(a['name'])==norm(seed['name'])]
+            aliases=[a for a in results if text_key(a['name'])==text_key(seed['name'])]
+            # Prefer an exact name before punctuation aliases (Emine'm is
+            # not Eminem); provider ordering is not an identity guarantee.
+            artist=max(exact or aliases,key=lambda a:int(a.get('nb_fan') or 0),default=None)
             if not artist:return []
             rows=fetch(f"artist/{artist['id']}/top?limit=100").get('data',[])
             # Harder tiers go one page deeper: top index 50 mostly holds album
@@ -130,7 +150,7 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80,progress=No
             for raw in rows:
                 if not raw.get('preview') or str(raw['artist']['id'])!=str(artist['id']): continue
                 if re.search(r'\b(live|karaoke|tribute|sped up|slowed|remix)\b',raw.get('title_version','')+' '+raw['title'],re.I):continue
-                t=clean(raw);t.update(seed_artist=seed['name'],genre=seed['genre'],language=seed['language'],region=seed['region'],country=seed.get('country','FI' if seed['region']=='Finland' else 'GB'),artist_id=str(artist['id']),rank=raw.get('rank',0))
+                t=clean(raw);t.update(seed_artist=seed['name'],genre=seed['genre'],genres=seed.get('genres',[seed['genre']]),language=seed['language'],region=seed['region'],country=seed.get('country','FI' if seed['region']=='Finland' else 'GB'),artist_id=str(artist['id']),rank=raw.get('rank',0))
                 k=title_key(t)
                 if k not in dedup or t['rank']>dedup[k]['rank']:dedup[k]=t
             return classify_tracks(list(dedup.values()),seed,region,genre)
@@ -140,7 +160,12 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80,progress=No
     if difficulty=='Easy':
         known=sum(any(recognition(seed,title,region,genre)>=85 for title in (profile(seed) or {}).get('examples',[])) for seed in seeds)
         minimum=min(12,max(4,known))
-    target=min(target_artists,len(selected))
+    # Aim for eligible artists, not successful HTTP requests. An artist with
+    # zero songs in this tier does not contribute to playable breadth.
+    attainable=len(selected)
+    if difficulty=='Easy':attainable=known
+    elif difficulty=='Hits':attainable=sum(text_key(seed['name']) in HOT_HITS for seed in selected)
+    target=min(target_artists,max(minimum,attainable))
     # Retry with fresh artists if some lookups fail, rather than silently starting
     # a tiny game from the first two artists whose requests happened to succeed.
     if progress:progress('artists',0,target)
@@ -153,14 +178,14 @@ def build_pool(fetch,clean,genre,region,difficulty,target_artists=80,progress=No
             if start==0 and not any(groups):
                 raise ValueError('The music provider returned no playable artists. Check connectivity and retry.')
             tracks={t['id']:t for group in groups for t in group}
-            counts={}
-            for t in tracks.values(): counts[t['language']]=counts.get(t['language'],0)+1
-            result=[t for t in tracks.values() if counts[t['language']]>=4]
+            # Sparse languages can use cross-language distractors; never drop
+            # their eligible artists just because the lane has fewer than four.
+            result=list(tracks.values())
             playable=band(result,difficulty)
             artists={artist_key(t) for t in playable}
             countries={t['country'] for t in playable}
             diverse=len(artists)>=minimum
-            if start+40>=target and diverse: break
+            if len(artists)>=target: break
     if not result or not diverse:
         raise ValueError('Not enough distinct artists have playable tracks at this difficulty. Try another genre, scene or difficulty; Easy was not filled with obscure songs.')
     return result
@@ -191,7 +216,7 @@ def artist_key(t):
 
 @lru_cache(maxsize=32768)
 def history_identity(artist,title):
-    artist=norm(artist);title=song_key(title)
+    artist=text_key(artist);title=song_key(title)
     return 'song:'+artist+'|'+title if artist and title else ''
 
 def song_history_keys(t):
@@ -205,28 +230,37 @@ def song_was_played(t,seen):
     if str(t.get('id','')) in seen:return True
     return history_identity(str(t.get('seed_artist') or t.get('artist') or ''),str(t.get('title') or '')) in seen
 
-def choose_song(r):
+def balance_lane(track):
+    # Include English-language Latin crossover artists in the Latin cap too.
+    return 'Spanish' if 'Latin' in track.get('genres',[track.get('genre')]) else track.get('language','Unknown')
+
+def choose_song(r, rng=None):
+    rng=rng or random
     playable=[t for t in r['pool'] if 'recognition' not in t or in_difficulty(t,r.get('difficulty','Medium'))]
     if r.get('mode')=='hits':playable=[t for t in playable if not t.get('playlist_track') or t.get('hot_hit')]
     if not playable:raise ValueError('No tracks meet this difficulty. Choose another mix.')
-    # Cross-game variety: avoid repeating the last game's artists/songs when
-    # the pool is large enough to allow it. Rooms hand over their tail via
-    # previous_artists/previous_songs on lobby return; solo hands it over via
-    # create payload from localStorage.
+    # Hard priority: do not replay a song while this eligible pool has unheard
+    # songs. Apply this BEFORE artist/language preferences so they cannot hide
+    # unheard alternatives. Different releases share a canonical identity.
+    seen=r.get('_played_song_ids',set())
+    used_ids=set(map(str,r['used']));used_keys=set()
+    for track in r['pool']:
+        if str(track['id']) in used_ids:used_keys.update(song_history_keys(track))
+    candidates=[t for t in playable if not (song_history_keys(t)&used_keys)] or playable[:]
+    fresh=[t for t in candidates if not song_was_played(t,seen)]
+    if fresh:candidates=fresh
+    else:
+        # Exhaustion is possible in a narrow decade or custom playlist. Reuse
+        # the least-played, oldest songs instead of returning to a hit lottery.
+        stats=r.get('_song_play_counts',{})
+        def replay_priority(t):
+            return max((stats[k] for k in song_history_keys(t) if k in stats),default=(0,''))
+        priority=min(map(replay_priority,candidates))
+        candidates=[t for t in candidates if replay_priority(t)==priority]
     avoid_artists=set(r.get('previous_artists',[]))
     avoid_songs=set(r.get('previous_songs',[]))
-    used_ids=set(r['used']);used_keys=set()
-    for track in playable:
-        if track['id'] in used_ids:used_keys.update(song_history_keys(track))
-    candidates=[t for t in playable if not (song_history_keys(t)&used_keys)]
-    seen=r.get('_played_song_ids',set())
-    def preserves_unheard(before,after):
-        if not seen:return True
-        return not any(not song_was_played(t,seen) for t in before) or any(not song_was_played(t,seen) for t in after)
-    if avoid_songs or avoid_artists:
-        fresh=[t for t in candidates if t['id'] not in avoid_songs and artist_key(t) not in avoid_artists]
-        if len({artist_key(t) for t in fresh})>=4 and preserves_unheard(candidates,fresh):candidates=fresh
-    if not candidates:r['used']=[];candidates=[t for t in playable if t['id'] not in avoid_songs] or playable[:]
+    preferred=[t for t in candidates if t['id'] not in avoid_songs and artist_key(t) not in avoid_artists]
+    if preferred:candidates=preferred
     history=r.setdefault('artist_counts',{})
     country_counts=r.setdefault('country_counts',{})
     language_counts=r.setdefault('language_counts',{})
@@ -234,26 +268,25 @@ def choose_song(r):
         limit=max(1,(r.get('rounds',10)+9)//10)
         if country_counts.get('FI',0)>=limit:
             non_finnish=[t for t in candidates if t.get('country')!='FI']
-            if non_finnish and preserves_unheard(candidates,non_finnish):candidates=non_finnish
+            if non_finnish:candidates=non_finnish
     # Broad audience mixes should not be dominated by any one language lane.
     # Metadata describes an artist's predominant language, not each lyric.
     # Limits yield when the remaining catalog is too narrow to comply.
-    if r.get('region') in ('Europe','Worldwide') and r.get('genre','Mixed')=='Mixed' and not r.get('playlist_report'):
-        rounds=max(1,r.get('rounds',10)); each=max(1,(rounds+4)//5); combined=max(1,(rounds*3+9)//10)
+    if r.get('region') in ('Europe','Worldwide') and r.get('genre','Mixed') not in ('Latin','Reggae','Afrobeats','K-pop','J-pop') and not r.get('playlist_report'):
+        rounds=max(1,r.get('rounds',10)); each=max(1,rounds//5); combined=max(1,rounds*3//10)
         limited={'Spanish','French'}
         lane_total=sum(language_counts.get(lang,0) for lang in limited)
-        balanced=[t for t in candidates if t.get('language') not in limited or (language_counts.get(t.get('language'),0)<each and lane_total<combined)]
-        if balanced and preserves_unheard(candidates,balanced):candidates=balanced
-    # At most a 10% chance of choosing a previously heard song while there is
-    # an unseen eligible song. If all eligible songs were heard, allow repeats.
-    if seen:
-        fresh=[t for t in candidates if not song_was_played(t,seen)]
-        repeats=[t for t in candidates if song_was_played(t,seen)]
-        if fresh and repeats:candidates=repeats if random.random()<.10 else fresh
-        elif fresh:candidates=fresh
-    # Only least-used eligible artists can be drawn, regardless of track count.
+        balanced=[t for t in candidates if balance_lane(t) not in limited or (language_counts.get(balance_lane(t),0)<each and lane_total<combined)]
+        if balanced:candidates=balanced
+    # Avoid repeating an artist within a game, then balance lifetime exposure
+    # for all named players. Rich discographies get no extra tickets.
     least=min(history.get(artist_key(t),0) for t in candidates)
     candidates=[t for t in candidates if history.get(artist_key(t),0)==least]
+    exposure=r.get('_artist_play_counts',{})
+    def artist_exposure(t):
+        return exposure.get(text_key(t.get('seed_artist') or t['artist']),0)
+    least=min(map(artist_exposure,candidates))
+    candidates=[t for t in candidates if artist_exposure(t)==least]
     # Soft country weights preserve variety without demanding one obscure artist
     # from every country. Artist uniformity prevents prolific catalogs dominating.
     by_artist={}
@@ -268,12 +301,12 @@ def choose_song(r):
         if r.get('region')=='Europe' and r.get('genre','Mixed')=='Mixed' and not r.get('playlist_report') and country in {'FI','SE','NO','DK','IS'}:weight*=1.5
         return weight
     weights=[artist_weight(a) for a in artists]
-    artist=random.choices(artists,weights=weights,k=1)[0]
+    artist=rng.choices(artists,weights=weights,k=1)[0]
     tracks=by_artist[artist]
-    song=random.choice(tracks)
+    song=rng.choice(tracks)
     country=song.get('country','?')
     history[artist]=history.get(artist,0)+1;country_counts[country]=country_counts.get(country,0)+1
-    language=song.get('language','Unknown');language_counts[language]=language_counts.get(language,0)+1
+    language=balance_lane(song);language_counts[language]=language_counts.get(language,0)+1
     r.setdefault('recent_artists',[]).append(artist)
     return song
 

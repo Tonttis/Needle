@@ -1,9 +1,12 @@
 """Persistent named scores and shared daily challenge snapshots."""
 import datetime, hashlib, json, random, sqlite3
 from pathlib import Path
+from contextlib import contextmanager
+from recognition import text_key
 
 DB_PATH=Path(__file__).parent/'data'/'needle-scores.sqlite3'
 
+@contextmanager
 def connection():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db=sqlite3.connect(DB_PATH,timeout=20)
@@ -12,7 +15,9 @@ def connection():
     db.execute('CREATE INDEX IF NOT EXISTS scores_filter ON scores(mode,difficulty,multiplayer,daily_date)')
     db.execute('CREATE TABLE IF NOT EXISTS daily_challenges (day TEXT PRIMARY KEY, pool_json TEXT NOT NULL, song_ids_json TEXT NOT NULL)')
     db.execute('CREATE TABLE IF NOT EXISTS played_songs (profile_key TEXT NOT NULL, song_id TEXT NOT NULL, first_played TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, last_played TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, plays INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(profile_key,song_id))')
-    return db
+    try:
+        with db:yield db
+    finally:db.close()
 
 def day_utc(): return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
@@ -26,32 +31,30 @@ def daily_snapshot(day, tracks):
     if existing:return existing
     candidates=[t for t in tracks if t.get('preview') and ('recognition' not in t or __import__('recognition').in_difficulty(t,'Easy'))]
     if len(candidates)<5:raise ValueError('Not enough songs are available for today’s challenge. Try again later.')
-    rng=random.Random(int(hashlib.sha256(('Needle-daily-v1:'+day).encode()).hexdigest(),16))
-    # Select uniformly by artist first, so prolific artists do not gain extra
-    # chances simply by having more tracks. Apply Europe Mixed's soft lanes.
-    groups={}
-    for track in sorted(candidates,key=lambda t:str(t['id'])):
-        key=str(track.get('artist_id') or track.get('artist','')).casefold()
-        groups.setdefault(key,[]).append(track)
-    if len(groups)<5:raise ValueError('Not enough different artists for today’s challenge.')
-    chosen=[];language_counts={};country_counts={}
-    while len(chosen)<5:
-        available=sorted(groups)
-        def fits(key):
-            track=groups[key][0];language=track.get('language','');country=track.get('country','')
-            if country=='FI' and country_counts.get('FI',0)>=1:return False
-            if language in ('French','Spanish'):
-                if language_counts.get(language,0)>=1:return False
-                if sum(language_counts.get(x,0) for x in ('French','Spanish'))>=2:return False
-            return True
-        balanced=[key for key in available if fits(key)] or available
-        def weight(key):
-            country=groups[key][0].get('country','')
-            return (1.5 if country in ('FI','SE','NO','DK','IS') else 1)/(1+country_counts.get(country,0)*.35)
-        artist=rng.choices(balanced,weights=[weight(key) for key in balanced],k=1)[0]
-        track=rng.choice(groups.pop(artist));chosen.append(track['id'])
-        language=track.get('language','');country=track.get('country','')
-        language_counts[language]=language_counts.get(language,0)+1;country_counts[country]=country_counts.get(country,0)+1
+    from catalog import choose_song, song_history_keys, norm
+    rng=random.Random(int(hashlib.sha256(('Needle-daily-v2:'+day).encode()).hexdigest(),16))
+    if len({str(t.get('artist_id') or t['artist']) for t in candidates})<5:
+        raise ValueError('Not enough different artists for today’s challenge.')
+    seen=set();artists={}
+    with connection() as db:
+        previous=db.execute('SELECT pool_json,song_ids_json FROM daily_challenges WHERE day<? ORDER BY day DESC LIMIT 30',(day,)).fetchall()
+    for pool_json,ids_json in previous:
+        ids=set(json.loads(ids_json))
+        for track in json.loads(pool_json):
+            if track['id'] not in ids:continue
+            seen.update(song_history_keys(track))
+            artist=text_key(track.get('seed_artist') or track['artist'])
+            artists[artist]=artists.get(artist,0)+1
+    room=dict(pool=sorted(candidates,key=lambda t:str(t['id'])),used=[],mode='guess',
+              difficulty='Easy',genre='Mixed',region='Europe',rounds=5,
+              _played_song_ids=seen,_artist_play_counts=artists)
+    chosen=[]
+    for _ in range(5):
+        track=choose_song(room,rng=rng);chosen.append(track['id']);room['used'].append(track['id'])
+        # A shared daily always has five different artists, even when the
+        # rolling daily history has exhausted a smaller artist's singles.
+        from catalog import artist_key
+        room['pool']=[t for t in room['pool'] if artist_key(t)!=artist_key(track)]
     with connection() as db:
         db.execute('INSERT OR IGNORE INTO daily_challenges VALUES (?,?,?)',(day,json.dumps(tracks),json.dumps(chosen)))
     return daily_existing(day)
@@ -95,6 +98,33 @@ def played_song_ids(names):
     with connection() as db:
         placeholders=','.join('?' for _ in keys)
         return {row[0] for row in db.execute('SELECT DISTINCT song_id FROM played_songs WHERE profile_key IN ('+placeholders+')',keys)}
+
+def selection_history(names):
+    """One indexed read for persistent song and artist exposure across rooms.
+
+    Existing v10 histories already contain canonical identities; no migration
+    or network lookups are required. Sum exposure across multiplayer names.
+    """
+    keys=list(dict.fromkeys(filter(None,(profile_key(n) for n in names))))
+    if not keys:return set(),{},{}
+    with connection() as db:
+        if len(keys)==1:
+            rows=db.execute('SELECT song_id,plays,last_played FROM played_songs WHERE profile_key=?',keys).fetchall()
+        else:
+            placeholders=','.join('?' for _ in keys)
+            rows=db.execute('SELECT song_id,SUM(plays),MAX(last_played) FROM played_songs WHERE profile_key IN ('+placeholders+') GROUP BY song_id',keys).fetchall()
+    artists={};stats={}
+    for key,plays,last in rows:
+        if key.startswith('song:') and '|' in key:
+            artist,title=key[5:].split('|',1)
+            artist=text_key(artist)
+            key='song:'+artist+'|'+title
+            artists[artist]=artists.get(artist,0)+plays
+        # Normalize older identities in memory; preserve the database and its
+        # play counts, including releases saved under punctuation variants.
+        old=stats.get(key,(0,''));stats[key]=(old[0]+plays,max(old[1],last))
+    return set(stats),artists,stats
+
 
 def record_played(names,song_id,identity=None):
     keys=list(dict.fromkeys(filter(None,(profile_key(n) for n in names))))

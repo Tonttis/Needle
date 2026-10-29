@@ -24,8 +24,9 @@ class PickerAuditTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as tmp,patch.object(lb,'DB_PATH',Path(tmp)/'scores.sqlite3'):
    for day in range(100):
     _,ids=lb.daily_snapshot(f'2026-{day:03}',pool)
+    self.assertEqual(len({i.split('-')[0] for i in ids}),5)
     counts['large']+=sum(i.startswith('0-') for i in ids)
-   self.assertGreater(counts['large'],30);self.assertLess(counts['large'],70)
+   self.assertGreater(counts['large'],30);self.assertLessEqual(counts['large'],100)
 
 class UploadedCatalogTests(unittest.TestCase):
  def test_existing_cache_is_readable_by_app(self):

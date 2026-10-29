@@ -58,7 +58,7 @@ def clean(t):
     names=list(dict.fromkeys(a['name'] for a in [t['artist']]+t.get('contributors',[]) if a.get('name')))
     artist=', '.join(names)
     query=urllib.parse.quote(artist+' '+t['title'])
-    return {'id':str(t['id']),'album_id':str(t.get('album',{}).get('id','')),'album_release_date':str(t.get('album',{}).get('release_date','')),'title':t['title'],'artist':artist,'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link',''),
+    return {'id':str(t['id']),'album_id':str(t.get('album',{}).get('id','')),'album_release_date':str(t.get('album',{}).get('release_date','')),'title':t['title'],'artist':artist,'seed_artist':t['artist']['name'],'preview':t.get('preview',''),'art':t.get('album',{}).get('cover_medium',''),'link':t.get('link',''),
             'spotify_url':'https://open.spotify.com/search/'+query}
 def credit(t):
     if t.get('_credits'): return t
@@ -154,10 +154,7 @@ def filter_decade(rows,decade,progress=None):
             album_id,year=future.result();years[album_id]=year
             if progress:progress('dates',len(years),len(ids))
     result=[dict(t,release_year=years[str(t['album_id'])]) for t in rows if str(t.get('album_id','')) in years and years[str(t['album_id'])] is not None and start<=years[str(t['album_id'])]<start+10]
-    counts={}
-    for track in result:
-        language=track.get('language','');counts[language]=counts.get(language,0)+1
-    result=[track for track in result if counts[track.get('language','')]>=4]
+    # Keep sparse-language artists; round_choices can use other languages.
     if len(result)<4:raise ValueError('Not enough dated tracks for this decade and mix. Try a broader selection.')
     return result
 def prepare_catalog(genre,region,difficulty,decade='All'):
@@ -334,18 +331,18 @@ def reserve_next_round(r):
     try:
         song=choose_round(shadow)
     except (ValueError,KeyError):return
-    pending={'song':song,'selection':{key:shadow[key] for key in _SELECTION_KEYS if key in shadow},'future':None}
+    pending={'history':dict(r.get('_song_play_counts',{})),'song':song,'selection':{key:shadow[key] for key in _SELECTION_KEYS if key in shadow},'future':None}
     r['_next_round']=pending
     if shadow['mode']=='race':pending['future']=queue_prefetch(dict(song))
 
 def advance(r):
     names=[player.get('name','') for player in r.get('players',{}).values()]
     prior_seen=r.get('_played_song_ids',set())
-    r['_played_song_ids']=boards.played_song_ids(names)
+    r['_played_song_ids'],r['_artist_play_counts'],r['_song_play_counts']=boards.selection_history(names)
     pending=r.pop('_next_round',None)
     # Another concurrent game may have played the reserved track since it was
     # selected. Re-select rather than use an outdated prefetch decision.
-    if pending and song_history_keys(pending['song']) & (r['_played_song_ids']-prior_seen):pending=None
+    if pending and (song_history_keys(pending['song']) & (r['_played_song_ids']-prior_seen) or pending.get('history',{})!=r['_song_play_counts']):pending=None
     if r.get('daily_ids'):
         r['song']=next(t for t in r['pool'] if t['id']==r['daily_ids'][r['round']]);r['_current_prefetch']=None
     elif pending:
@@ -373,9 +370,11 @@ def advance(r):
     r['deadline']=r['deadline'] if r.get('mode')=='race' else time.time()+45
     if r.get('mode')=='race':queue_youtube(r)
     r['reveal_metadata']={};r['reveal_pending']=False;r['reveal_done']=False
-    if r.get('mode')!='race':
-        keys=song_history_keys(r['song']);identity=next((k for k in keys if k.startswith('song:')),None)
-        boards.record_played(names,r['song']['id'],identity);r['_played_song_ids'].update(keys)
+    # Count every selected round, including skipped/abandoned Video Race.
+    # Prefetch reservations are not counted until actually assigned a round.
+    keys=song_history_keys(r['song']);identity=next((k for k in keys if k.startswith('song:')),None)
+    boards.record_played(names,r['song']['id'],identity)
+    r['_played_song_ids'],r['_artist_play_counts'],r['_song_play_counts']=boards.selection_history(names)
     reserve_next_round(r)
 def settle(r):
     if r['phase']!='playing': return
@@ -813,8 +812,6 @@ class Handler(BaseHTTPRequestHandler):
                         r['race_ready'].add(p)
                         if not r.get('race_started') and r['race_ready']>=set(r['players'])-set(r['guesses']):
                             r['race_started']=time.time()+2;r['deadline']=r['race_started']+r['race_duration'];r['race_status']='playing'
-                            keys=song_history_keys(r['song']);identity=next((k for k in keys if k.startswith('song:')),None)
-                            boards.record_played([v.get('name','') for k,v in r['players'].items() if k not in r['guesses']],r['song']['id'],identity);r.setdefault('_played_song_ids',set()).update(keys)
                     elif action=='race-audio' and not r.get('race_started') and not r.get('race_audio_only'):
                         r['race_audio_only']=True;r['audioKey']=secrets.token_urlsafe(24);r['race_ready']=set();r.pop('race_path',None);queue_youtube(r)
                     elif action=='race-retry' and r.get('race_status')=='error':queue_youtube(r)
@@ -823,8 +820,6 @@ class Handler(BaseHTTPRequestHandler):
                         if len(r['guesses'])==len(r['players']):r['phase']='reveal';r['winners']=[]
                         elif not r.get('race_started') and r.get('race_status')=='ready' and r['race_ready']>=set(r['players'])-set(r['guesses']):
                             r['race_started']=time.time()+2;r['deadline']=r['race_started']+r['race_duration'];r['race_status']='playing'
-                            keys=song_history_keys(r['song']);identity=next((k for k in keys if k.startswith('song:')),None)
-                            boards.record_played([v.get('name','') for k,v in r['players'].items() if k not in r['guesses']],r['song']['id'],identity);r.setdefault('_played_song_ids',set()).update(keys)
                     return self.reply(state(r,p))
                 if action=='guess':
                     if r.get('mode')=='race' and (not r.get('race_started') or time.time()<r['race_started']):raise ValueError('Waiting for media playback')

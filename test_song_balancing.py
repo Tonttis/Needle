@@ -38,13 +38,13 @@ class SongBalanceTests(unittest.TestCase):
   for _ in range(10):
    song=c.choose_song(r);r['used'].append(song['id'])
   self.assertEqual(len(r['used']),10)
- def test_repeat_probability_and_fallback(self):
+ def test_no_repeat_until_unheard_exhausted_and_fallback(self):
   pool=[t for t in tracks() if t['language']=='English'];seen={t['id'] for t in pool[:15]};r=dict(pool=pool,used=[],mode='guess',region='Worldwide',genre='Mixed',rounds=10,_played_song_ids=seen)
   counts=0
   for seed in range(3000):
    random.seed(seed);r.update(artist_counts={},country_counts={},language_counts={},recent_artists=[])
    if c.choose_song(r)['id'] in seen:counts+=1
-  self.assertGreater(counts,200);self.assertLess(counts,360)
+  self.assertEqual(counts,0)
   r['_played_song_ids']={t['id'] for t in pool};self.assertIn(c.choose_song(r)['id'],r['_played_song_ids'])
  def test_same_song_different_provider_id_is_seen(self):
   original={'id':'one','artist':'The Artist','title':'The Song'};duplicate={'id':'two','artist':'The Artist','title':'The Song'}

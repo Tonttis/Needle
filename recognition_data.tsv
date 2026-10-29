@@ -526,3 +526,25 @@ RU|Russian|Electronic|IC3PEAK|local|Смерти больше нет;Плак-п
 RU|Russian|Electronic|Cream Soda|local|Сердце лёд;Никаких больше вечеринок|editorial
 RU|English|Pop|Dead Blonde|local|Мальчик на девятке;Снег растаял|editorial
 RU|Russian|Electronic|Aigel|local|Татарин;Вы молоды|editorial
+
+# Wider rap anchors: explicit familiar singles, not entire discographies.
+US|English|Rap / Hip Hop|Jay-Z|global|Empire State Of Mind;99 Problems;Hard Knock Life (Ghetto Anthem)|editorial;officialcharts-jay-z
+US|English|Rap / Hip Hop|2Pac|global|Changes;California Love;All Eyez On Me|editorial;officialcharts-2pac
+US|English|Rap / Hip Hop|The Notorious B.I.G.|global|Juicy;Hypnotize;Big Poppa;Mo Money Mo Problems|editorial
+US|English|Rap / Hip Hop|Missy Elliott|global|Get Ur Freak On;Work It;Lose Control|editorial;officialcharts-missy-elliott
+US|English|Rap / Hip Hop|Run-D.M.C.|global|Walk This Way;It's Like That|editorial;officialcharts-run-dmc
+US|English|Rap / Hip Hop|Ice Cube|global|It Was A Good Day;You Can Do It|editorial
+US|English|Rap / Hip Hop|Nas|global|If I Ruled The World (Imagine That);N.Y. State of Mind|editorial
+US|English|Rap / Hip Hop|Lauryn Hill|global|Doo Wop (That Thing);Everything Is Everything|editorial
+US|English|Rap / Hip Hop|Beastie Boys|global|Sabotage;Intergalactic;Fight For Your Right|editorial
+US|English|Rap / Hip Hop|DMX|global|X Gon' Give It To Ya;Party Up;Ruff Ryders' Anthem|editorial
+US|English|Rap / Hip Hop|Busta Rhymes|global|Break Ya Neck;Touch It;I Know What You Want|editorial
+US|English|Rap / Hip Hop|Ludacris|global|Stand Up;Move Bitch;What's Your Fantasy|editorial
+US|English|Rap / Hip Hop|Lil Wayne|global|Lollipop;A Milli;6 Foot 7 Foot|editorial
+US|English|Rap / Hip Hop|Nicki Minaj|global|Super Bass;Starships;Anaconda|editorial
+US|English|Rap / Hip Hop|Macklemore & Ryan Lewis|global|Thrift Shop;Can't Hold Us;Same Love|editorial
+US|English|Rap / Hip Hop|J. Cole|global|No Role Modelz;Work Out|editorial
+US|English|Rap / Hip Hop|Kid Cudi|global|Day 'N' Nite;Pursuit Of Happiness (Nightmare)|editorial
+US|English|Rap / Hip Hop|Fugees|global|Ready Or Not;Fu-Gee-La;Killing Me Softly With His Song|editorial
+US|English|Rap / Hip Hop;Pop|Flo Rida|global|Low;Right Round;Good Feeling;Whistle|editorial
+US|English|Rap / Hip Hop;Pop|Black Eyed Peas|global|Where Is The Love?;Pump It;Let's Get It Started;Boom Boom Pow|editorial
