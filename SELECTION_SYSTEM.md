@@ -4,7 +4,7 @@ The v11.1 Japanese catalog expansion is described in `JAPANESE_CATALOG.md`. The 
 
 ## Selection contract
 
-All regular modes use the same picker. Party changes the round's mode/tier, then uses that picker. Custom playlists retain their own eligible tracks. Hottest Hits still requires its curated hit flag. Difficulty and decade are never widened to manufacture variety.
+All catalog-based modes use the same picker. Song Duel is a separate online mode with player-selected songs; see `SONG_DUEL.md`. Party changes the round's mode/tier, then uses that picker. Custom playlists retain their own eligible tracks. Hottest Hits still requires its curated hit flag. Difficulty and decade are never widened to manufacture variety.
 
 1. Filter to the selected difficulty and mode.
 2. Exclude songs already assigned in the current game, matching both provider ID and normalized artist/title identity.

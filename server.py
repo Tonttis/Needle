@@ -1,3 +1,4 @@
+import duel
 import math
 import unicodedata
 import logging
@@ -430,6 +431,7 @@ def settle_race(r):
         return
 
 def state(r,p):
+    if r.get('mode')=='duel':return DUEL.state(r,p)
     settle(r)
     if r['phase']=='finished' and r.get('match_id'):boards.record_match(r)
     if r['phase']=='reveal' and not r.get('recap_recorded'):
@@ -576,6 +578,7 @@ def active_race_media():
                 if future and future.done() and not future.cancelled():
                     try:paths.append(future.result()[2])
                     except Exception:pass
+        if globals().get('DUEL'):paths.extend(DUEL.protected_paths())
         return paths
 
 def fetch_race_media(song,audio_only=False):
@@ -604,6 +607,7 @@ def queue_youtube(r):
             if cur and cur.get('audioKey')==key:cur.update(result)
     video_workers.submit(run)
 start_janitor(DATA,active_race_media)
+DUEL=duel.Duel(rooms,lock,DATA,lambda path:fetch(path),lambda raw:clean(raw),lambda song,audio:fetch_race_media(song,audio))
 FILTER_OPTIONS=filter_options()
 def require_player_name(value):
     if not isinstance(value,str):raise ValueError('Enter your name (up to 24 characters).')
@@ -623,7 +627,7 @@ class Handler(BaseHTTPRequestHandler):
             u=urllib.parse.urlparse(self.path); q=urllib.parse.parse_qs(u.query)
             if u.path=='/api/leaderboard':
                 mode=q.get('mode',['guess'])[0];difficulty=q.get('difficulty',['Easy'])[0];multi=q.get('multi',['0'])[0]=='1';daily=q.get('daily',[''])[0]
-                if mode not in ('guess','choice','race','hits','party') or difficulty not in DIFFICULTIES+['Hits','Playlist','Normal']:raise ValueError('Invalid leaderboard filter')
+                if mode not in ('guess','choice','race','hits','party','duel') or difficulty not in DIFFICULTIES+['Hits','Playlist','Normal','Duel']:raise ValueError('Invalid leaderboard filter')
                 if daily and (len(daily)!=10 or not all(c.isdigit() or c=='-' for c in daily)):raise ValueError('Invalid date')
                 return self.reply({'entries':boards.leaderboard(mode,difficulty,multi,daily or None),'date':daily or None})
             if u.path=='/api/daily':return self.reply({'date':boards.day_utc(),'rounds':5,'mode':'guess','difficulty':'Easy','region':'Europe','ready':boards.daily_existing(boards.day_utc()) is not None})
@@ -661,7 +665,12 @@ class Handler(BaseHTTPRequestHandler):
                     r=rooms.get(code)
                     if not r:return self.reply({'error':'This room could not be found. Ask for a new invite.'},404)
                     if not r.get('multi'):return self.reply({'error':'This is not a multiplayer room.'},400)
-                    return self.reply({'room':code,'host':r['players'][r['host']]['name'],'mode':r.get('game_mode',r['mode']),'genre':r['genre'],'region':r['region'],'difficulty':r['difficulty'],'decade':r.get('decade','All'),'rounds':r['rounds'],'players':len(r['players']),'joinable':r['phase']=='lobby' and len(r['players'])<8,'reason':'This game has already started.' if r['phase']!='lobby' else 'This room is full.' if len(r['players'])>=8 else ''})
+                    return self.reply({'room':code,'host':r['players'][r['host']]['name'],'mode':r.get('game_mode',r['mode']),'genre':r['genre'],'region':r['region'],'difficulty':r['difficulty'],'decade':r.get('decade','All'),'rounds':r['rounds'],'players':len(r['players']),'max_players':2 if r.get('mode')=='duel' else 8,'joinable':r['phase']=='lobby' and len(r['players'])<(2 if r.get('mode')=='duel' else 8),'reason':'This game has already started.' if r['phase']!='lobby' else 'This room is full.' if len(r['players'])>=(2 if r.get('mode')=='duel' else 8) else ''})
+            if u.path=='/api/duel-search':
+                return self.reply(DUEL.search(q.get('room',[''])[0],q.get('token',[''])[0],q.get('q',[''])[0],int(q.get('round',['0'])[0]),q.get('generation',[''])[0]))
+            if u.path.startswith('/duel-clip/'):
+                data=DUEL.clip(q.get('room',[''])[0],q.get('token',[''])[0],u.path.split('/')[-1],int(q.get('clip',['-1'])[0]),int(q.get('round',['0'])[0]))
+                self.send_response(200);self.send_header('Content-Type','audio/mpeg');self.send_header('Content-Length',str(len(data)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(data);return
             if u.path=='/api/search':
                 with lock:
                     r=rooms[q.get('room',[''])[0]]
@@ -745,6 +754,7 @@ class Handler(BaseHTTPRequestHandler):
                     rooms[code]=r;advance(r);return self.reply({'room':code,'token':p})
             if action=='create':
                 name=require_player_name(d.get('name'))
+                if d.get('mode')=='duel':return self.reply(DUEL.create(name,d.get('multi'),d.get('rounds',5)))
                 if d.get('mode')=='hits':d.update(genre='Mixed',region='Worldwide',difficulty='Hits')
                 playlist_url=str(d.get('playlist_url','')).strip()
                 playlist_report=None
@@ -776,6 +786,7 @@ class Handler(BaseHTTPRequestHandler):
                 with lock:
                     room=rooms.get(code)
                     if not room or token!=room['host'] or room['phase']!='lobby':raise ValueError('Only the host can edit a lobby')
+                    if room.get('mode')=='duel':raise ValueError('Use the Song Duel lobby controls to change its rounds.')
                 mode=d.get('mode'); party_modes=d.get('party_modes',[])
                 if mode not in ('guess','choice','race','hits','party'):raise ValueError('Invalid game mode')
                 if not isinstance(party_modes,list) or any(m not in ('guess','choice','race','hits') for m in party_modes) or (mode=='party' and not party_modes):raise ValueError('Choose at least one Party mode.')
@@ -801,10 +812,12 @@ class Handler(BaseHTTPRequestHandler):
                 if not r:raise ValueError('This room could not be found. Ask for a new invite.')
                 if action=='join':
                     name=require_player_name(d.get('name'))
-                    if r['phase']!='lobby' or len(r['players'])>=8: raise ValueError('Room started or full')
+                    if r['phase']!='lobby' or len(r['players'])>=(2 if r.get('mode')=='duel' else 8): raise ValueError('Room started or full')
                     p=secrets.token_urlsafe(24); r['players'][p]={'name':name,'score':0}; return self.reply({'room':r['code'],'token':p})
                 p=d['token']
                 if p not in r['players']: raise ValueError('Invalid player session')
+                if r.get('mode')=='duel':return self.reply(DUEL.handle(r,p,action,d))
+                if action.startswith('duel-'):raise ValueError('This is not a Song Duel room.')
                 settle(r)
                 if action in ('race-ready','race-retry','race-skip','race-audio'):
                     if r.get('mode')!='race' or r['phase']!='playing' or d.get('round')!=r['round']:raise ValueError('Round changed')
@@ -858,4 +871,5 @@ class Handler(BaseHTTPRequestHandler):
 if __name__=='__main__':
     http=ThreadingHTTPServer(('0.0.0.0',int(os.getenv('PORT',3000))),Handler)
     start_catalog_rotation()
+    DUEL.start_clock()
     http.serve_forever()
